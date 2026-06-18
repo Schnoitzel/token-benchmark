@@ -32,7 +32,31 @@ geschrieben (reine Standardbibliothek, keine Abhängigkeiten).
 | `runners.py` | starten `pi`/`claude` als Subprozess (in Sandbox), parsen Token-JSON, Versions-Abfrage |
 | `judge.py` | blinder LLM-Richter (Opus, Swap-Test) – Qualitätsbewertung |
 | `report.py` | Markdown-Report-Generator (Median/Streuung, Baseline, Qualität, Provenienz) |
-| `results/` | JSON-Rohdaten + Markdown-Berichte (auto) |
+| `utils.py` | gemeinsame Helfer: `fmt_cost`/`fmt_n`/`ratio`, `load_suite`/`latest_suite_path`, `overhead_tokens` (EINE Quelle, kein Dup) |
+| `stats.py` | Streuungsmaße (`median`/`stdev`/`iqr`/`rel_spread`/`summary`) + `build_aggregates` (Median+Streuung je Kombination) |
+| `tests/` | `unittest`-Suite (Mocks, hermetisch) + Fixtures + opt-in Realmessung (`test_live_measurement`, `RUN_LIVE=1`) |
+| `docs/methodik.md` | Erhebungsmethode + verifizierte Cache-Semantik (Referenz hinter den Zahlen) |
+| `docs/evidence/` | versionierte Referenzläufe (JSON+Report) als zitierfähige Belege |
+| `docs/plans/` | Feature-Workflow-Pläne (Single Source of Truth für den Fortschritt) |
+| `.github/workflows/tests.yml` | CI: fährt Unit-Tests bei Push/PR (keine Live-Kosten) |
+| `results/` | JSON-Rohdaten + Markdown-Berichte (auto, gitignored) |
+
+## Tests & Entwicklung
+- **Tests:** `python3 -m unittest discover -s tests` (schnell, Mocks, kostenlos).
+  Reale Messung: `RUN_LIVE=1 python3 -m unittest tests.test_live_measurement`.
+- **Aggregate:** Suite-JSON enthält `aggregates` (Median+Streuung je
+  task×model×harness) via `stats.build_aggregates` → UI/Report ohne Neuberechnung.
+- **`/api/config`** liefert auch `pricing` (Preise + Cache-Faktoren) → UI hat
+  KEINE hartkodierten Preise mehr (siehe `server.build_config`).
+- **UI** (`static/index.html`): Theme-Umschalter (dunkel/hell, localStorage),
+  „Präsentieren"-Slide (3 Kernzahlen), Drill-down „Wie erhoben?", Provenienz-Panel.
+  Offen (Version 2): Export/Druck, Multi-Slides, erweiterte Live-Robustheit.
+- **Verifizierte Kernzahl:** Overhead = `input+cache_read+cache_write`; Pi ohne
+  Caching (~3,1k), CC mit Prompt-Cache (~27–29k) → ~7–9,5× Token, ~5× Kosten,
+  Qualität ≈ gleich. Details: `docs/methodik.md`.
+- **Workflow:** Feature-Workflow-Skill; Implementierung via Subagenten
+  (`worker`), Health-Checks `architect`/`overseer` alle ~3 Schritte + Phasenende,
+  `reviewer` am Phasenende. Plan-Ticks als eigene Commits, Red→Green sichtbar.
 
 ## Wichtige technische Details
 - **Pi hängt bei offener stdin** im `-p`-Modus → alle Subprozesse mit
