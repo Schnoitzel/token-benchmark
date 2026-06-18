@@ -10,6 +10,8 @@ Nur Python-Standardbibliothek (statistics).
 import statistics
 from collections import defaultdict
 
+from utils import overhead_tokens
+
 
 def median(values: list[float]) -> float:
     return statistics.median(values) if values else 0.0
@@ -46,9 +48,10 @@ def rel_spread(values: list[float]) -> float:
     if len(values) < 2:
         return 0.0
     m = median(values)
-    if not m:
+    if m == 0:
         return 0.0
-    return (max(values) - min(values)) / m
+    # Betrag im Nenner -> relative Streuung ist nie negativ
+    return (max(values) - min(values)) / abs(m)
 
 
 def summary(values: list[float]) -> dict:
@@ -77,9 +80,8 @@ _METRICS = {
     "output_tokens": lambda r: r["usage"]["output_tokens"],
     "cache_read": lambda r: r["usage"]["cache_read"],
     "cache_write": lambda r: r["usage"]["cache_write"],
-    "overhead": lambda r: (r["usage"]["input_tokens"]
-                           + r["usage"]["cache_read"]
-                           + r["usage"]["cache_write"]),
+    # nutzt dieselbe Definition wie utils -> keine Duplikation (architect-Befund)
+    "overhead": lambda r: overhead_tokens(r["usage"]),
     "cost_usd": lambda r: r["usage"]["cost_usd"],
     "duration_ms": lambda r: r["duration_ms"],
 }

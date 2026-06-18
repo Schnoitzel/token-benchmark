@@ -31,6 +31,14 @@ class TestEinzelmasse(unittest.TestCase):
     def test_rel_spread_bei_n1_ist_null(self):
         self.assertEqual(stats.rel_spread([7]), 0.0)
 
+    def test_rel_spread_median_null_ist_null(self):
+        # Median exakt 0 -> keine Division, 0.0 (nicht crashen/inf)
+        self.assertEqual(stats.rel_spread([-1, 0, 1]), 0.0)
+
+    def test_rel_spread_negativer_median_ist_positiv(self):
+        # rel. Streuung ist ein Betrag: (max-min)/|median|, nie negativ
+        self.assertAlmostEqual(stats.rel_spread([-5, -3, -1]), 4 / 3, places=6)
+
 
 class TestSummary(unittest.TestCase):
     def test_summary_felder(self):
