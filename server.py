@@ -21,12 +21,23 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+import re
+
 import pricing
+import report
 from core import filter_models, filter_tasks, run_benchmark_iter
 from models import MODELS
 from tasks import TASKS, Task
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+_RUN_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def safe_run_id(run_id: str) -> bool:
+    """True, wenn run_id gefahrlos in einen Dateinamen darf (kein Path-Traversal).
+    Erlaubt nur Buchstaben/Ziffern/Unterstrich/Bindestrich."""
+    return bool(run_id) and _RUN_ID_RE.match(run_id) is not None
 
 
 def build_config() -> dict:
@@ -76,6 +87,16 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_download(self, body: str, filename: str, content_type: str):
+        """Text als Download ausliefern (Content-Disposition: attachment)."""
+        data = body.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 
     # --- Routing -----------------------------------------------------------
 
@@ -154,6 +175,21 @@ class Handler(BaseHTTPRequestHandler):
                 return
             with open(fp, encoding="utf-8") as f:
                 self._send_json(json.load(f))
+            return
+
+        if path == "/api/report":
+            run_id = qs.get("run_id", [""])[0]
+            if not safe_run_id(run_id):
+                self._send_json({"error": "ungueltige run_id"}, status=400)
+                return
+            fp = os.path.join(HERE, "results", f"benchmark-{run_id}.json")
+            if not os.path.exists(fp):
+                self._send_json({"error": "not found"}, status=404)
+                return
+            with open(fp, encoding="utf-8") as f:
+                suite = json.load(f)
+            md = report.build_markdown(suite)
+            self._send_download(md, f"benchmark-{run_id}.md", "text/markdown; charset=utf-8")
             return
 
         if path == "/api/run":

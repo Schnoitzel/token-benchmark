@@ -35,5 +35,17 @@ class TestBuildConfig(unittest.TestCase):
         self.assertEqual(cm["read"], pricing.CACHE_READ_MULT)
 
 
+class TestSafeRunId(unittest.TestCase):
+    """run_id geht in einen Dateipfad - Path-Traversal muss abgewiesen werden."""
+
+    def test_akzeptiert_normale_ids(self):
+        for ok in ("dcf6c6db", "abc123", "20260618-1200-abcd", "A_b-9"):
+            self.assertTrue(server.safe_run_id(ok), ok)
+
+    def test_weist_gefaehrliche_ids_ab(self):
+        for bad in ("", "..", "../etc/passwd", "a/b", "a\\b", "x.json", "a b"):
+            self.assertFalse(server.safe_run_id(bad), repr(bad))
+
+
 if __name__ == "__main__":
     unittest.main()
