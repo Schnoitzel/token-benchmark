@@ -1,6 +1,6 @@
 # Professionalisierung Token-Benchmark (Pi vs Claude Code)
 
-- **Status:** Approved
+- **Status:** In Progress
 - **Date:** 2026-06-18
 - **Branch/Worktree:** main (kleine, in sich geschlossene Schritte; bei Bedarf Feature-Branches)
 
@@ -77,9 +77,11 @@ Realmessungen sind aber jederzeit reproduzierbar abrufbar.
 ## Task Breakdown
 
 ### Phase 1 — Engineering-Fundament & Tests
-- [ ] 1.1 `docs/plans/` + diesen Plan committen.
-- [ ] 1.2 Echte Beispielausgaben einmal real erzeugen und als Fixtures ablegen
-  (eine Pi-JSONL, eine Claude-JSON) — Grundlage für Parser-Tests.
+- [x] 1.1 `docs/plans/` + diesen Plan committen. — erledigt (Commit `caa3629`).
+- [x] 1.2 Echte Beispielausgaben einmal real erzeugen und als Fixtures ablegen
+  (eine Pi-JSONL, eine Claude-JSON) — Grundlage für Parser-Tests. — erledigt.
+  Befund: Pi `input=3068`, cache=0; CC overhead ~29k (`cache_read=21506`,
+  `cache_write=7714`) → ~9,5×. Fliesst in Phase 2.1/methodik.md ein.
 - [ ] 1.3 `tests/test_pricing.py`: bekannte Modelle, Cache-Faktoren, unbekanntes
   Modell → `None`, dict- und Objekt-Eingabe.
 - [ ] 1.4 `tests/test_judge.py`: `extract_json` (Code-Fences/Begleittext/kaputt),
