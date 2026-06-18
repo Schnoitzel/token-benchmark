@@ -12,13 +12,28 @@
     --border: #2c3142;
     --text: #e6e8ee;
     --muted: #9aa0b0;
-    --pi: #38bdf8;        /* hellblau */
-    --cc: #c084fc;        /* lila */
+    --pi: #34d399;        /* grün */
+    --cc: #f472b6;        /* pink */
     --good: #4ade80;
     --warn: #fbbf24;
     --bad: #f87171;
     --accent: #6366f1;
     --shadow: 0 4px 24px rgba(0,0,0,.35);
+  }
+  [data-theme="light"] {
+    --bg: #f5f7fa;
+    --panel: #ffffff;
+    --panel-2: #f0f2f5;
+    --border: #d1d5db;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --pi: #059669;
+    --cc: #a21caf;
+    --good: #059669;
+    --warn: #d97706;
+    --bad: #dc2626;
+    --accent: #4f46e5;
+    --shadow: 0 2px 8px rgba(0,0,0,.08);
   }
   * { box-sizing: border-box; }
   body {
@@ -32,9 +47,31 @@
     padding: 28px 32px 20px;
     border-bottom: 1px solid var(--border);
     background: linear-gradient(180deg, #161922, #0f1117);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
   }
+  [data-theme="light"] header {
+    background: linear-gradient(180deg, #ffffff, #f5f7fa);
+  }
+  header .header-left { flex: 1; }
   header h1 { margin: 0; font-size: 24px; letter-spacing: -.3px; }
   header p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+  .theme-toggle {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all .2s;
+    color: var(--text);
+  }
+  .theme-toggle:hover {
+    background: var(--panel-2);
+    transform: scale(1.05);
+  }
   .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 32px 64px; }
 
   .card {
@@ -103,12 +140,13 @@
   .pbar-outer { height:10px; background:var(--panel-2); border-radius:999px; overflow:hidden; margin:6px 0 14px; }
   .pbar-inner { height:100%; width:0%; background:linear-gradient(90deg,var(--pi),var(--accent),var(--cc)); transition:width .3s; }
   .log { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size:12.5px; max-height:240px; overflow:auto; background:#0b0d13; border:1px solid var(--border); border-radius:10px; padding:12px; }
+  [data-theme="light"] .log { background: #fafbfc; }
   .log .line { padding:2px 0; white-space:pre-wrap; }
   .log .ok { color:var(--good); }
   .log .err { color:var(--bad); }
   .log .dim { color:var(--muted); }
-  .log .pi { color:var(--pi); }
-  .log .cc { color:var(--cc); }
+  .log .pi { color:var(--pi); font-weight: 600; }
+  .log .cc { color:var(--cc); font-weight: 600; }
 
   /* Results */
   #resultsCard { display:none; }
@@ -151,12 +189,15 @@
   .bar-fill.cc { background:var(--cc); color:#1a0a28; }
 
   details { background:var(--panel-2); border:1px solid var(--border); border-radius:10px; margin-bottom:10px; }
-  details summary { cursor:pointer; padding:12px 14px; font-weight:600; font-size:14px; }
+  details summary { cursor:pointer; padding:12px 14px; font-weight:600; font-size:14px; user-select: none; }
+  details summary:hover { background: var(--panel); }
   details .resp-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:0 14px 14px; }
   .prompt-box { margin:0 14px 14px; background:#0b0d13; border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:8px; padding:10px 14px; }
+  [data-theme="light"] .prompt-box { background: #fafbfc; }
   .prompt-box .plabel { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-bottom:6px; }
   .prompt-box pre { white-space:pre-wrap; word-break:break-word; margin:0; font-size:12.5px; font-family:ui-monospace,Menlo,monospace; max-height:200px; overflow:auto; color:var(--text); }
   .resp-box { background:#0b0d13; border:1px solid var(--border); border-radius:8px; padding:12px; }
+  [data-theme="light"] .resp-box { background: #fafbfc; }
   .resp-box h4 { margin:0 0 6px; font-size:13px; }
   .resp-box .stat { font-size:12px; color:var(--muted); margin-bottom:8px; }
   .resp-box pre { white-space:pre-wrap; word-break:break-word; margin:0; font-size:12.5px; font-family:ui-monospace,Menlo,monospace; max-height:340px; overflow:auto; }
@@ -165,12 +206,120 @@
   .hint { font-size:12.5px; color:var(--muted); margin-top:10px; }
   .section-title { font-size:14px; font-weight:600; margin:26px 0 12px; color:var(--text); }
   .toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+
+  /* Drill-Down Panel */
+  .drill-panel { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font-size: 12.5px; line-height: 1.7; }
+  .drill-panel h5 { margin: 0 0 8px; font-size: 13px; color: var(--accent); }
+  .drill-panel .drill-row { display: flex; gap: 20px; margin-bottom: 6px; flex-wrap: wrap; }
+  .drill-panel .drill-item { flex: 1; min-width: 200px; }
+  .drill-panel .drill-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+  .drill-panel .drill-value { font-weight: 600; color: var(--text); font-size: 13px; }
+
+  /* Provenienz Panel */
+  .prov-section { margin-bottom: 16px; }
+  .prov-section h5 { margin: 0 0 8px; font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: .5px; }
+  .prov-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .prov-item { }
+  .prov-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+  .prov-value { font-weight: 600; color: var(--text); font-size: 13px; font-family: ui-monospace, monospace; }
+
+  /* Präsentieren-Overlay */
+  .present-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg);
+    z-index: 9999;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    overflow: auto;
+  }
+  .present-overlay.show { display: flex; }
+  .present-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 18px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    transition: .2s;
+  }
+  .present-close:hover { background: var(--panel-2); }
+  .present-content {
+    max-width: 1200px;
+    width: 100%;
+  }
+  .present-title {
+    font-size: 32px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 50px;
+    color: var(--text);
+  }
+  .present-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 30px;
+    margin-bottom: 40px;
+  }
+  .present-card {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 30px;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .present-card-label {
+    font-size: 16px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+  .present-card-value {
+    font-size: 80px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+  .present-card-value.good { color: var(--good); }
+  .present-card-value.bad { color: var(--bad); }
+  .present-card-value.neutral { color: var(--accent); }
+  .present-card-desc {
+    font-size: 16px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .present-card-desc b { color: var(--text); }
+  .present-footer {
+    text-align: center;
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 30px;
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1>🪙 Token-Benchmark</h1>
-  <p>Vergleich des Token-Verbrauchs: <b style="color:var(--pi)">Pi</b> vs <b style="color:var(--cc)">Claude Code</b> — gleiche Prompts, gleiche Modelle.</p>
+  <div class="header-left">
+    <h1>🪙 Token-Benchmark</h1>
+    <p>Vergleich des Token-Verbrauchs: <b style="color:var(--pi)">Pi</b> vs <b style="color:var(--cc)">Claude Code</b> — gleiche Prompts, gleiche Modelle.</p>
+  </div>
+  <button class="theme-toggle" onclick="toggleTheme()" title="Farbschema umschalten">
+    <span id="themeIcon">🌙</span>
+  </button>
 </header>
 
 <div class="wrap">
@@ -228,6 +377,7 @@
 
     <div class="controls">
       <button class="btn" id="startBtn" onclick="startRun()">▶ Benchmark starten</button>
+      <button class="btn ghost" id="presentBtn" onclick="openPresent()" style="display:none">▶ Präsentieren</button>
       <span class="est">Geplant: <b id="estRuns">0</b> Läufe</span>
     </div>
     <div class="hint">Tipp: Zum Ausprobieren erst „Nur trivial“ + ein Modell wählen — das ist schnell und günstig.</div>
@@ -252,6 +402,12 @@
     </div>
     <div id="qualityBox" style="margin-top:14px"></div>
 
+    <div class="section-title" style="margin-top:28px">Provenienz (Test-Umgebung & Parameter)</div>
+    <details id="provenienzDetails">
+      <summary>Details anzeigen</summary>
+      <div id="provenienzContent" style="padding:14px"></div>
+    </details>
+
     <div class="section-title" style="margin-top:28px">System-Prompt-Overhead (Cache-Tokens pro Anfrage)</div>
     <div class="barchart" id="overheadChart"></div>
 
@@ -274,17 +430,45 @@
 
 </div>
 
+<!-- Präsentieren-Overlay -->
+<div class="present-overlay" id="presentOverlay">
+  <button class="present-close" onclick="closePresent()">✕ Schließen</button>
+  <div class="present-content">
+    <div class="present-title">🎯 Benchmark-Ergebnisse auf einen Blick</div>
+    <div class="present-cards" id="presentCards"></div>
+    <div class="present-footer" id="presentFooter"></div>
+  </div>
+</div>
+
 <script>
-let CONFIG = { models: [], tasks: [] };
+let CONFIG = { models: [], tasks: [], pricing: null };
 
 // --- Init ------------------------------------------------------------------
 async function init() {
+  // Theme aus localStorage laden
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeIcon();
+
   const r = await fetch('/api/config');
   CONFIG = await r.json();
   renderModels();
   renderTasks();
   refreshPast();
   updateEstimate();
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+  document.getElementById('themeIcon').textContent = theme === 'dark' ? '🌙' : '☀️';
 }
 
 function renderModels() {
@@ -569,26 +753,75 @@ function renderResults(suite) {
   const tokFactor = piTok ? (ccTok/piTok) : 0;
   const costFactor = piCost ? (ccCost/piCost) : 0;
 
-  const piInputTok  = sum(pi, r => r.usage.input_tokens);
-  const ccInputTok  = sum(cc, r => r.usage.input_tokens);
-  const piCacheTok  = sum(pi, r => r.usage.cache_read + r.usage.cache_write);
-  const ccCacheTok  = sum(cc, r => r.usage.cache_read + r.usage.cache_write);
-  const piOutTok    = sum(pi, r => r.usage.output_tokens);
-  const ccOutTok    = sum(cc, r => r.usage.output_tokens);
-  const piDurAvg    = avg(pi, r => r.duration_ms);
-  const ccDurAvg    = avg(cc, r => r.duration_ms);
+  // Preis-Faktoren aus Config laden (oder Defaults)
+  let W = { input: 1, cacheRead: 0.1, cacheWrite: 1.25, output: 5 };
+  if (CONFIG.pricing && CONFIG.pricing.cache_multipliers) {
+    W.cacheRead = CONFIG.pricing.cache_multipliers.read || 0.1;
+    W.cacheWrite = CONFIG.pricing.cache_multipliers.write || 1.25;
+  }
+  // Output-Gewicht aus dem ersten verwendeten Modell (falls verfügbar)
+  if (CONFIG.pricing && CONFIG.pricing.models) {
+    const modelLabels = [...new Set(res.map(r => r.model_label))];
+    if (modelLabels.length && CONFIG.pricing.models[modelLabels[0]]) {
+      const m = CONFIG.pricing.models[modelLabels[0]];
+      if (m.output && m.input) W.output = m.output / m.input;
+    }
+  }
 
-  // Preis-Faktoren relativ zu Input-Tokens (bei allen Anthropic-Modellen identisch):
-  //   Input ×1 · Cache-Read ×0,1 · Cache-Write ×1,25 · Output ×5
-  // "Gewichtete Tokens" = Rohtokens umgerechnet in Input-Token-Äquivalente.
-  // Dieser Wert ist proportional zu den echten Kosten – der faire Token-Vergleich.
-  const W = { input: 1, cacheRead: 0.1, cacheWrite: 1.25, output: 5 };
-  const weighted = r => r.usage.input_tokens * W.input
-                      + r.usage.cache_read   * W.cacheRead
-                      + r.usage.cache_write  * W.cacheWrite
-                      + r.usage.output_tokens* W.output;
-  const piWtTok = sum(pi, weighted);
-  const ccWtTok = sum(cc, weighted);
+  // Wenn aggregates vorhanden, bevorzugt Median-basierte Berechnung
+  let piInputTok, ccInputTok, piCacheTok, ccCacheTok, piOutTok, ccOutTok, piDurAvg, ccDurAvg, piWtTok, ccWtTok;
+  let useAggregates = suite.aggregates && suite.aggregates.length > 0;
+  
+  if (useAggregates) {
+    // Aggregierte Werte (Median) für baseline oder alle Tasks
+    const baselineAggs = suite.aggregates.filter(a => a.task_complexity === 'baseline');
+    const aggs = baselineAggs.length > 0 ? baselineAggs : suite.aggregates;
+    const piAggs = aggs.filter(a => a.harness === 'pi');
+    const ccAggs = aggs.filter(a => a.harness === 'claude-code');
+    
+    const getMetric = (arr, metric) => {
+      if (!arr.length) return 0;
+      const sum = arr.reduce((s, a) => s + (a.metrics[metric] ? a.metrics[metric].median : 0), 0);
+      return sum / arr.length;  // Durchschnitt der Mediane über alle Modelle/Tasks
+    };
+    
+    piInputTok = getMetric(piAggs, 'input_tokens');
+    ccInputTok = getMetric(ccAggs, 'input_tokens');
+    piCacheTok = getMetric(piAggs, 'cache_read') + getMetric(piAggs, 'cache_write');
+    ccCacheTok = getMetric(ccAggs, 'cache_read') + getMetric(ccAggs, 'cache_write');
+    piOutTok = getMetric(piAggs, 'output_tokens');
+    ccOutTok = getMetric(ccAggs, 'output_tokens');
+    piDurAvg = getMetric(piAggs, 'duration_ms');
+    ccDurAvg = getMetric(ccAggs, 'duration_ms');
+    
+    // Gewichtete Tokens
+    const weightedFromAgg = a => {
+      const inp = a.metrics.input_tokens ? a.metrics.input_tokens.median : 0;
+      const cr = a.metrics.cache_read ? a.metrics.cache_read.median : 0;
+      const cw = a.metrics.cache_write ? a.metrics.cache_write.median : 0;
+      const out = a.metrics.output_tokens ? a.metrics.output_tokens.median : 0;
+      return inp * W.input + cr * W.cacheRead + cw * W.cacheWrite + out * W.output;
+    };
+    piWtTok = piAggs.length ? piAggs.reduce((s, a) => s + weightedFromAgg(a), 0) / piAggs.length : 0;
+    ccWtTok = ccAggs.length ? ccAggs.reduce((s, a) => s + weightedFromAgg(a), 0) / ccAggs.length : 0;
+  } else {
+    // Fallback: Summe über alle Ergebnisse (alte Logik)
+    piInputTok  = sum(pi, r => r.usage.input_tokens);
+    ccInputTok  = sum(cc, r => r.usage.input_tokens);
+    piCacheTok  = sum(pi, r => r.usage.cache_read + r.usage.cache_write);
+    ccCacheTok  = sum(cc, r => r.usage.cache_read + r.usage.cache_write);
+    piOutTok    = sum(pi, r => r.usage.output_tokens);
+    ccOutTok    = sum(cc, r => r.usage.output_tokens);
+    piDurAvg    = avg(pi, r => r.duration_ms);
+    ccDurAvg    = avg(cc, r => r.duration_ms);
+    
+    const weighted = r => r.usage.input_tokens * W.input
+                        + r.usage.cache_read   * W.cacheRead
+                        + r.usage.cache_write  * W.cacheWrite
+                        + r.usage.output_tokens* W.output;
+    piWtTok = sum(pi, weighted);
+    ccWtTok = sum(cc, weighted);
+  }
 
   // Rendert Wert + farbiges Delta-Badge. lowerIsBetter=true: kleinerer Wert ist grün.
   // rawTokens=true: Badge mit "(roh)" markieren – rohe Tokens sind kein fairer Kostenvergleich.
@@ -628,18 +861,28 @@ function renderResults(suite) {
     return `<span class="val">${fmtVal}</span>${badge}`;
   }
 
+  // Streuung/Range-Info (falls aggregates vorhanden)
+  let rangeInfo = '';
+  if (useAggregates) {
+    const baselineAggs = suite.aggregates.filter(a => a.task_complexity === 'baseline');
+    const aggs = baselineAggs.length > 0 ? baselineAggs : suite.aggregates;
+    if (aggs.length > 0 && aggs[0].n) {
+      rangeInfo = ` <span style="font-size:11px;color:var(--muted);font-weight:400">(Median, n=${aggs[0].n})</span>`;
+    }
+  }
+
   const kpis = document.getElementById('kpis');
   kpis.innerHTML = `
   <div class="cmp-wrap"><table class="cmp">
     <thead><tr>
       <th></th>
-      <th>Input-Tokens</th>
-      <th>Cache-Tokens</th>
-      <th>Output-Tokens</th>
-      <th>Total (roh)</th>
-      <th title="Rohtokens umgerechnet in Input-Token-Äquivalente via Preis-Faktoren">Gewichtet ☆</th>
-      <th>Kosten</th>
-      <th>Ø Dauer</th>
+      <th>Input-Tokens${rangeInfo}</th>
+      <th>Cache-Tokens${rangeInfo}</th>
+      <th>Output-Tokens${rangeInfo}</th>
+      <th>Total${rangeInfo}</th>
+      <th title="Rohtokens umgerechnet in Input-Token-Äquivalente via Preis-Faktoren">Gewichtet ☆${rangeInfo}</th>
+      <th>Kosten${rangeInfo}</th>
+      <th>Ø Dauer${rangeInfo}</th>
     </tr></thead>
     <tbody>
       <tr>
@@ -664,14 +907,29 @@ function renderResults(suite) {
       </tr>
     </tbody>
   </table></div>
+  
+  <!-- Drill-Down für Kernzahlen -->
+  <details style="margin-top:16px">
+    <summary style="font-size:13px;color:var(--accent);cursor:pointer;user-select:none">🔍 Wie wurden diese Zahlen erhoben?</summary>
+    <div class="drill-panel" style="margin-top:10px">
+      ${renderDrillDown(suite, W)}
+    </div>
+  </details>
+  
   <div class="price-note">
-    ⚠ <b>Token-Zähler sind roh und nicht kostengewichtet.</b> Verschiedene Token-Typen kosten unterschiedlich viel (Haiku 4.5):
-    <b>Input</b> $1,00/MTok · <b>Cache-Read</b> <span class="warn">$0,10/MTok (10× billiger!)</span> · <b>Cache-Write</b> $1,25/MTok · <b>Output</b> $5,00/MTok.<br>
+    ⚠ <b>Token-Zähler sind roh und nicht kostengewichtet.</b> Verschiedene Token-Typen kosten unterschiedlich viel:
+    <b>Input</b> ×${W.input.toFixed(2)} · <b>Cache-Read</b> <span class="warn">×${W.cacheRead.toFixed(2)} (${(1/W.cacheRead).toFixed(0)}× billiger!)</span> · <b>Cache-Write</b> ×${W.cacheWrite.toFixed(2)} · <b>Output</b> ×${W.output.toFixed(1)}.<br>
     Ein roher Vergleich der Token-Anzahl (z.B. "10,7× mehr") übertreibt daher den Unterschied – die <b>Kosten-Spalte</b> ist der faire Vergleich.
     Die Token-Badges sind deshalb mit <b>(roh)</b> markiert.<br>
-    <b>☆ Gewichtet</b> = Rohtokens umgerechnet in Input-Token-Äquivalente (Input ×1 · Cache-Read ×0,1 · Cache-Write ×1,25 · Output ×5).
+    <b>☆ Gewichtet</b> = Rohtokens umgerechnet in Input-Token-Äquivalente (Input ×${W.input} · Cache-Read ×${W.cacheRead} · Cache-Write ×${W.cacheWrite} · Output ×${W.output}).
     Dieser Wert ist proportional zu den echten Kosten – sein Faktor stimmt mit der Kosten-Spalte überein und zeigt den <b>realen</b> Mehrverbrauch.
   </div>`;
+
+  // Provenienz rendern
+  renderProvenance(suite);
+
+  // Präsentieren-Button aktivieren
+  document.getElementById('presentBtn').style.display = 'inline-block';
 
   // Overhead-Chart pro Modell
   const models = [...new Set(res.map(r => r.model_label))];
@@ -780,6 +1038,192 @@ function renderResults(suite) {
   document.getElementById('resultsCard').scrollIntoView({behavior:'smooth'});
 }
 
+function renderDrillDown(suite, W) {
+  if (!suite.aggregates || suite.aggregates.length === 0) {
+    return '<p style="color:var(--muted);font-size:12px">Keine aggregierten Daten verfügbar (alte Suite-Version).</p>';
+  }
+  
+  const baselineAggs = suite.aggregates.filter(a => a.task_complexity === 'baseline');
+  const aggs = baselineAggs.length > 0 ? baselineAggs : suite.aggregates;
+  const piAggs = aggs.filter(a => a.harness === 'pi');
+  const ccAggs = aggs.filter(a => a.harness === 'claude-code');
+  
+  if (!piAggs.length && !ccAggs.length) return '<p style="color:var(--muted);font-size:12px">Keine Daten.</p>';
+  
+  const renderHarness = (name, aggsArr) => {
+    if (!aggsArr.length) return '';
+    const a = aggsArr[0];  // Beispiel-Aggregat (alle haben gleiche Struktur)
+    const inp = a.metrics.input_tokens ? a.metrics.input_tokens.median : 0;
+    const cr = a.metrics.cache_read ? a.metrics.cache_read.median : 0;
+    const cw = a.metrics.cache_write ? a.metrics.cache_write.median : 0;
+    const out = a.metrics.output_tokens ? a.metrics.output_tokens.median : 0;
+    const overhead = inp + cr + cw;
+    const n = a.n || 1;
+    
+    let rangeStr = '';
+    if (a.metrics.overhead) {
+      const m = a.metrics.overhead;
+      rangeStr = ` (${fmtN(m.min)}–${fmtN(m.max)})`;
+    }
+    
+    return `
+      <h5>${name} — Overhead${rangeStr}, n=${n}</h5>
+      <div class="drill-row">
+        <div class="drill-item"><div class="drill-label">Input-Tokens</div><div class="drill-value">${fmtN(inp)}</div></div>
+        <div class="drill-item"><div class="drill-label">Cache-Read</div><div class="drill-value">${fmtN(cr)}</div></div>
+        <div class="drill-item"><div class="drill-label">Cache-Write</div><div class="drill-value">${fmtN(cw)}</div></div>
+        <div class="drill-item"><div class="drill-label">Output-Tokens</div><div class="drill-value">${fmtN(out)}</div></div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:8px 0 0"><b>Formel:</b> Overhead = Input + Cache-Read + Cache-Write = ${fmtN(inp)} + ${fmtN(cr)} + ${fmtN(cw)} = <b>${fmtN(overhead)}</b></p>
+    `;
+  };
+  
+  let html = renderHarness('Pi', piAggs);
+  html += renderHarness('Claude Code', ccAggs);
+  
+  // Mini-Provenienz
+  if (suite.provenance) {
+    const p = suite.provenance;
+    html += '<hr style="margin:16px 0;border:none;border-top:1px solid var(--border)">';
+    html += '<h5>Provenienz (Auszug)</h5>';
+    html += '<div class="drill-row">';
+    if (p.tool_versions) {
+      html += `<div class="drill-item"><div class="drill-label">Pi-Version</div><div class="drill-value">${p.tool_versions.pi || '?'}</div></div>`;
+      html += `<div class="drill-item"><div class="drill-label">Claude Code-Version</div><div class="drill-value">${p.tool_versions.claude || '?'}</div></div>`;
+    }
+    if (p.repeat) html += `<div class="drill-item"><div class="drill-label">Wiederholungen</div><div class="drill-value">${p.repeat}</div></div>`;
+    html += '</div>';
+  }
+  
+  return html;
+}
+
+function renderProvenance(suite) {
+  const el = document.getElementById('provenienzContent');
+  if (!suite.provenance) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:12px">Keine Provenienz-Daten vorhanden.</p>';
+    return;
+  }
+  
+  const p = suite.provenance;
+  let html = '';
+  
+  if (p.tool_versions) {
+    html += '<div class="prov-section"><h5>Versionen</h5><div class="prov-grid">';
+    html += `<div class="prov-item"><div class="prov-label">Pi</div><div class="prov-value">${p.tool_versions.pi || 'n/a'}</div></div>`;
+    html += `<div class="prov-item"><div class="prov-label">Claude Code</div><div class="prov-value">${p.tool_versions.claude || 'n/a'}</div></div>`;
+    html += '</div></div>';
+  }
+  
+  if (p.flags) {
+    html += '<div class="prov-section"><h5>Flags</h5><div class="prov-grid">';
+    html += `<div class="prov-item" style="grid-column:1/-1"><div class="prov-label">Pi</div><div class="prov-value" style="font-size:11px;word-break:break-all">${p.flags.pi || 'n/a'}</div></div>`;
+    html += `<div class="prov-item" style="grid-column:1/-1"><div class="prov-label">Claude Code</div><div class="prov-value" style="font-size:11px;word-break:break-all">${p.flags.claude || 'n/a'}</div></div>`;
+    html += '</div></div>';
+  }
+  
+  if (p.sandbox !== undefined || p.repeat !== undefined || p.platform || p.python) {
+    html += '<div class="prov-section"><h5>Umgebung</h5><div class="prov-grid">';
+    if (p.sandbox !== undefined) html += `<div class="prov-item"><div class="prov-label">Sandbox</div><div class="prov-value">${p.sandbox ? 'Ja' : 'Nein'}</div></div>`;
+    if (p.repeat !== undefined) html += `<div class="prov-item"><div class="prov-label">Wiederholungen</div><div class="prov-value">${p.repeat}</div></div>`;
+    if (p.platform) html += `<div class="prov-item"><div class="prov-label">Plattform</div><div class="prov-value">${p.platform}</div></div>`;
+    if (p.python) html += `<div class="prov-item"><div class="prov-label">Python</div><div class="prov-value">${p.python}</div></div>`;
+    html += '</div></div>';
+  }
+  
+  if (p.pricing_usd_per_mtok || p.cache_multipliers) {
+    html += '<div class="prov-section"><h5>Pricing (Basis)</h5><div class="prov-grid">';
+    if (p.pricing_usd_per_mtok) {
+      const pr = p.pricing_usd_per_mtok;
+      Object.keys(pr).forEach(model => {
+        const m = pr[model];
+        html += `<div class="prov-item" style="grid-column:1/-1"><div class="prov-label">${model}</div><div class="prov-value" style="font-size:11px">Input: $${m.input}/MTok, Output: $${m.output}/MTok</div></div>`;
+      });
+    }
+    if (p.cache_multipliers) {
+      const cm = p.cache_multipliers;
+      html += `<div class="prov-item"><div class="prov-label">Cache-Read-Faktor</div><div class="prov-value">${cm.read}×</div></div>`;
+      html += `<div class="prov-item"><div class="prov-label">Cache-Write-Faktor</div><div class="prov-value">${cm.write}×</div></div>`;
+    }
+    html += '</div></div>';
+  }
+  
+  if (p.cost_basis) {
+    html += `<div class="prov-section"><p style="font-size:11px;color:var(--muted);margin:0"><b>Kostenbasis:</b> ${p.cost_basis}</p></div>`;
+  }
+  
+  el.innerHTML = html;
+}
+
+function openPresent() {
+  if (!currentSuite) return;
+  
+  // Faktoren berechnen (aus baseline-aggregates oder allen)
+  let tokenFactor = 0, costFactor = 0, qualityDelta = 0, qualityAvailable = false;
+  
+  if (currentSuite.aggregates && currentSuite.aggregates.length > 0) {
+    const baselineAggs = currentSuite.aggregates.filter(a => a.task_complexity === 'baseline');
+    const aggs = baselineAggs.length > 0 ? baselineAggs : currentSuite.aggregates;
+    const piAggs = aggs.filter(a => a.harness === 'pi');
+    const ccAggs = aggs.filter(a => a.harness === 'claude-code');
+    
+    const avgMetric = (arr, metric) => {
+      if (!arr.length) return 0;
+      const sum = arr.reduce((s, a) => s + (a.metrics[metric] ? a.metrics[metric].median : 0), 0);
+      return sum / arr.length;
+    };
+    
+    const piOverhead = avgMetric(piAggs, 'overhead');
+    const ccOverhead = avgMetric(ccAggs, 'overhead');
+    const piCost = avgMetric(piAggs, 'cost_usd');
+    const ccCost = avgMetric(ccAggs, 'cost_usd');
+    
+    tokenFactor = piOverhead > 0 ? ccOverhead / piOverhead : 0;
+    costFactor = piCost > 0 ? ccCost / piCost : 0;
+  } else {
+    // Fallback: aus Rohdaten
+    const pi = currentSuite.results.filter(r => r.harness === 'pi' && !r.error);
+    const cc = currentSuite.results.filter(r => r.harness === 'claude-code' && !r.error);
+    const sum = (arr, f) => arr.reduce((a, r) => a + f(r), 0);
+    const piOverhead = pi.length ? sum(pi, r => r.usage.input_tokens + r.usage.cache_read + r.usage.cache_write) / pi.length : 0;
+    const ccOverhead = cc.length ? sum(cc, r => r.usage.input_tokens + r.usage.cache_read + r.usage.cache_write) / cc.length : 0;
+    const piCost = pi.length ? sum(pi, r => r.usage.cost_usd) / pi.length : 0;
+    const ccCost = cc.length ? sum(cc, r => r.usage.cost_usd) / cc.length : 0;
+    
+    tokenFactor = piOverhead > 0 ? ccOverhead / piOverhead : 0;
+    costFactor = piCost > 0 ? ccCost / piCost : 0;
+  }
+  
+  if (currentSuite.quality && currentSuite.quality.summary) {
+    qualityDelta = currentSuite.quality.summary.score_delta;
+    qualityAvailable = true;
+  }
+  
+  const cards = document.getElementById('presentCards');
+  cards.innerHTML = `
+    <div class="present-card">
+      <div class="present-card-label">Token-Overhead-Faktor</div>
+      <div class="present-card-value bad">${tokenFactor > 0 ? tokenFactor.toFixed(1) + '×' : 'n/a'}</div>
+      <div class="present-card-desc">Claude Code hat <b>${tokenFactor > 0 ? tokenFactor.toFixed(1) + '×' : '?'}</b> mehr System-Prompt-Overhead (Cache-Tokens) als Pi.</div>
+    </div>
+    <div class="present-card">
+      <div class="present-card-label">Kosten-Faktor</div>
+      <div class="present-card-value bad">${costFactor > 0 ? costFactor.toFixed(1) + '×' : 'n/a'}</div>
+      <div class="present-card-desc">Claude Code kostet <b>${costFactor > 0 ? costFactor.toFixed(1) + '×' : '?'}</b> mehr als Pi (bei identischen Prompts & Modellen).</div>
+    </div>
+    <div class="present-card">
+      <div class="present-card-label">Qualitäts-Delta</div>
+      <div class="present-card-value ${qualityAvailable ? (Math.abs(qualityDelta) < 0.25 ? 'good' : (qualityDelta > 0 ? 'bad' : 'good')) : 'neutral'}">${qualityAvailable ? (Math.abs(qualityDelta) < 0.25 ? '≈ 0' : (qualityDelta > 0 ? '+' : '') + qualityDelta.toFixed(2)) : '?'}</div>
+      <div class="present-card-desc">${qualityAvailable ? (Math.abs(qualityDelta) < 0.25 ? '<b>Kein bedeutsamer Unterschied</b> in der Antwortqualität.' : (qualityDelta > 0 ? 'Claude Code im Schnitt <b>+' + qualityDelta.toFixed(2) + ' Punkte</b> besser.' : 'Pi im Schnitt <b>+' + (-qualityDelta).toFixed(2) + ' Punkte</b> besser.')) : 'Noch nicht bewertet — Button „Qualität bewerten“ nutzen.'}</div>
+    </div>
+  `;
+  
+  const footer = document.getElementById('presentFooter');
+  footer.innerHTML = `Run ${currentSuite.run_id} · ${currentSuite.results.length} Läufe${currentSuite.provenance && currentSuite.provenance.repeat ? ' (×' + currentSuite.provenance.repeat + ' Wiederholungen)' : ''}`;
+  
+  document.getElementById('presentOverlay').classList.add('show');
+}
+
 // --- Frühere Läufe ---------------------------------------------------------
 async function refreshPast() {
   const r = await fetch('/api/results');
@@ -819,6 +1263,20 @@ async function loadPast() {
   const suite = await r.json();
   renderResults(suite);
 }
+
+function closePresent() {
+  document.getElementById('presentOverlay').classList.remove('show');
+}
+
+// ESC-Taste zum Schließen
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('presentOverlay');
+    if (overlay.classList.contains('show')) {
+      closePresent();
+    }
+  }
+});
 
 init();
 </script>
