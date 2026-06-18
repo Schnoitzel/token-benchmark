@@ -371,7 +371,10 @@ def build_markdown(suite: dict) -> str:
             L.append(f"- **Cache-Faktoren:** write ×{cm.get('write')} · read ×{cm.get('read')} (relativ zum Input-Preis)")
         L.append(f"- **Plattform:** {prov.get('platform', '')} · Python {prov.get('python', '')}")
     L.append("- Token-Zahlen stammen direkt aus den API-Antworten der Harnesses.")
-    L.append("- `cache_write` = System-Prompt beim ersten Auftreten, `cache_read` bei Folgeaufrufen.")
+    L.append("- Overhead = `input + cache_read + cache_write` (mitgeschickter Kontext ohne Antwort).")
+    L.append("- Pi schickt den System-Prompt als reinen `input` (kein Caching); Claude Code nutzt "
+             "server-seitiges Prompt-Caching (`cache_read` + `cache_write`). Der Total-Overhead "
+             "ist warm/kalt-unabhaengig stabil – Details: `docs/methodik.md`.")
     L.append("- Kosten werden fuer **beide** Harnesses einheitlich aus den Token-Zahlen berechnet (pricing.py).")
 
     # Fehlerhinweis

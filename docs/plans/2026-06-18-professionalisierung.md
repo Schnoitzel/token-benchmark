@@ -96,15 +96,16 @@ Realmessungen sind aber jederzeit reproduzierbar abrufbar.
 - [x] 1.9 GitHub-Actions-Workflow für Unit-Tests (öffentlich, gratis; nur Mocks,
   keine Live-Kosten). - erledigt (`.github/workflows/tests.yml`).
 
-### Phase 2 — Zahlen wasserdicht (Methodik)
+### Phase 2 - Zahlen wasserdicht (Methodik)
 - [x] 2.0 **Refactor `utils.py`** (aus architect-Befund): gemeinsame Helfer
-  konsolidieren — `fmt_cost`/`fmt_n`/`ratio` (Inkonsistenz main `.4f` vs report
+  konsolidieren - `fmt_cost`/`fmt_n`/`ratio` (Inkonsistenz main `.4f` vs report
   `.3f` → vereinheitlicht `.4f`), `load_suite`/`latest_suite_path`,
   `overhead_tokens(usage)`. Test-first (13 Tests), Suite 77 grün,
   report/judge/main importieren daraus, CLI+Report end-to-end geprueft.
-- [ ] 2.1 **Cache-Semantik verifizieren:** Baseline real laufen lassen, Rohdaten
-  inspizieren - zahlt jeder frische Subprozess `cache_write`, ist `cache_read`≈0?
-  Befund in `docs/methodik.md` festhalten.
+- [x] 2.1 **Cache-Semantik verifizieren:** Baseline real (Haiku, 5x). Befund:
+  Pi kein Caching (Overhead=input 3069); CC Prompt-Cache (29296 = input 10 +
+  cache_read 21506 + cache_write 7778); Total-Overhead warm/kalt-stabil (σ<2);
+  Faktor 9,55×. Dokumentiert in `docs/methodik.md`.
 - [ ] 2.2 Overhead-Erzählung an Befund angleichen (Report-/UI-Texte): Overhead =
   `input + cache_write (+ cache_read)`, klar erklärt, keine angreifbare Formulierung.
 - [ ] 2.3 `stats.py`: `median`, `stdev`, `iqr`, `min/max`, `rel_spread`, `n`.

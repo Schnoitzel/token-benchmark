@@ -14,10 +14,14 @@ Beide Harnesses nutzen dieselbe Anthropic API, setzen aber unterschiedlich viele
 | **Pi** | Minimalistisch – nur Kern-Tools, kein Sub-Agent, kein Plan-Mode |
 | **Claude Code** | Feature-reich – voller System-Prompt inkl. MCP, Permissions, Sub-Agents, … |
 
-**Gemessen (Sonnet 4.6, triviale Frage):**
-- Pi: **~2.160 Cache-Tokens** (System-Prompt)
-- Claude Code: **~22.800 Cache-Tokens**
-- → **≈ 10× Token-Overhead, ≈ 16× Kosten** – bei identischer Antwort!
+**Verifiziert gemessen (Haiku 4.5, Baseline, 5 Wiederholungen, Run `3997a0b9`):**
+- Pi: **~3.069 Overhead-Tokens** (System-Prompt als reiner `input`, kein Caching)
+- Claude Code: **~29.296 Overhead-Tokens** (`input` + `cache_read` + `cache_write`)
+- → **≈ 9,5× Token-Overhead** (Kosten-Overhead ~5×, da CC viel billiges `cache_read` nutzt)
+
+Overhead = `input + cache_read + cache_write` (Kontext pro Anfrage ohne Antwort),
+bei beiden hoch reproduzierbar (Streuung < 2 Tokens). Vollstaendige Methodik und
+Cache-Semantik: **[docs/methodik.md](docs/methodik.md)**.
 
 ## Voraussetzungen
 
