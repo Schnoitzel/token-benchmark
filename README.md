@@ -145,6 +145,32 @@ token-benchmark-py/
 └── results/         # wird automatisch erstellt
 ```
 
+## Tests
+
+Die Test-Suite nutzt – wie das Tool selbst – **nur die Python-Standardbibliothek**
+(`unittest`), keine Installation noetig.
+
+```bash
+# Alle (schnellen) Unit-Tests – mit Mocks, kostenlos, keine API-Aufrufe
+python3 -m unittest discover -s tests
+
+# Einzelnes Modul
+python3 -m unittest tests.test_pricing
+```
+
+Die Unit-Tests decken die reine Logik ab (Pricing, Judge-Parsing/Swap-Test,
+Report-Aggregation, Runner-Parsing gegen **echte** Beispielausgaben in
+`tests/fixtures/`, Core-Orchestrierung). Sie laufen ohne `pi`/`claude` und ohne
+Netz.
+
+**Reale Messung (opt-in, kostet Tokens):** Tests, die echte Aussagen ueber den
+Token-Verbrauch treffen, rufen `pi`/`claude` wirklich auf. Sie sind standardmaessig
+uebersprungen und werden nur mit gesetzter Umgebungsvariable ausgefuehrt:
+
+```bash
+RUN_LIVE=1 python3 -m unittest tests.test_live_measurement
+```
+
 ## Wichtiger technischer Hinweis
 
 Pi liest im Print-Modus (`-p`) auch `stdin` und wartet auf EOF. Wird Pi als

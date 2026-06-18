@@ -1,0 +1,22 @@
+name: Tests
+
+# Faehrt bei jedem Push und Pull-Request die schnellen Unit-Tests (mit Mocks).
+# Es werden KEINE echten pi/claude-Aufrufe gemacht -> keine Kosten, kein Login noetig.
+# Die realen Mess-Tests (tests/test_live_measurement) sind opt-in (RUN_LIVE=1)
+# und laufen bewusst NICHT in der CI.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Unit-Tests (Standardbibliothek, keine Abhaengigkeiten)
+        run: python3 -m unittest discover -s tests -v
