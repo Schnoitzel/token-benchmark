@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from typing import Iterator
 
 import pricing
+import stats
 from models import MODELS, Model
 from tasks import TASKS, Task
 from runners import (
@@ -159,12 +160,16 @@ def run_benchmark_iter(
                         time.sleep(delay)
 
     finished_at = datetime.now(timezone.utc).isoformat()
+    result_dicts = [asdict(r) for r in results]
     suite = {
         "run_id": run_id,
         "started_at": started_at,
         "finished_at": finished_at,
         "provenance": build_provenance(repeat),
-        "results": [asdict(r) for r in results],
+        "results": result_dicts,
+        # Vorberechnete Aggregate (Median+Streuung je Kombination), damit UI und
+        # Report belastbare Zahlen ohne Neuberechnung anzeigen koennen.
+        "aggregates": stats.build_aggregates(result_dicts),
     }
 
     os.makedirs("results", exist_ok=True)

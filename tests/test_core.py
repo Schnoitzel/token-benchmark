@@ -108,6 +108,17 @@ class TestRunBenchmarkIter(unittest.TestCase):
         self.assertEqual(done["suite"]["provenance"]["repeat"], 1)
         self.assertEqual(len(done["suite"]["results"]), 2)
 
+    def test_suite_enthaelt_aggregate(self):
+        events = self._run(repeat=3)
+        suite = events[-1]["suite"]
+        self.assertIn("aggregates", suite)
+        # 1 task x 1 modell x 2 harnesses = 2 Aggregat-Gruppen
+        self.assertEqual(len(suite["aggregates"]), 2)
+        agg = suite["aggregates"][0]
+        self.assertEqual(agg["n"], 3)
+        self.assertIn("overhead", agg["metrics"])
+        self.assertIn("median", agg["metrics"]["total_tokens"])
+
 
 if __name__ == "__main__":
     unittest.main()

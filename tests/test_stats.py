@@ -59,5 +59,58 @@ class TestSummary(unittest.TestCase):
         self.assertEqual(s["stdev"], 0.0)
 
 
+def _res(harness, task="baseline-overhead", model="Haiku 4.5", complexity="baseline",
+         inp=0, out=0, cr=0, cw=0, total=None, cost=0.0, dur=1000, error=None):
+    if total is None:
+        total = inp + out + cr + cw
+    return {
+        "harness": harness, "task_id": task, "model_label": model,
+        "task_complexity": complexity, "duration_ms": dur, "error": error,
+        "usage": {"input_tokens": inp, "output_tokens": out, "cache_read": cr,
+                  "cache_write": cw, "total_tokens": total, "cost_usd": cost},
+    }
+
+
+class TestBuildAggregates(unittest.TestCase):
+    def test_gruppiert_und_aggregiert(self):
+        results = [
+            _res("pi", total=100, cost=0.001),
+            _res("pi", total=300, cost=0.003),
+        ]
+        aggs = stats.build_aggregates(results)
+        self.assertEqual(len(aggs), 1)
+        a = aggs[0]
+        self.assertEqual(a["harness"], "pi")
+        self.assertEqual(a["task_id"], "baseline-overhead")
+        self.assertEqual(a["n"], 2)
+        self.assertEqual(a["metrics"]["total_tokens"]["median"], 200)
+        self.assertEqual(a["metrics"]["total_tokens"]["min"], 100)
+        self.assertEqual(a["metrics"]["total_tokens"]["max"], 300)
+
+    def test_overhead_metric_ist_input_plus_cache(self):
+        results = [_res("pi", inp=500, cr=100, cw=400, out=999)]
+        aggs = stats.build_aggregates(results)
+        self.assertEqual(aggs[0]["metrics"]["overhead"]["median"], 1000)
+
+    def test_fehler_werden_ausgeschlossen(self):
+        results = [
+            _res("pi", total=100),
+            _res("pi", total=999999, error="kaputt"),
+        ]
+        aggs = stats.build_aggregates(results)
+        self.assertEqual(aggs[0]["n"], 1)
+        self.assertEqual(aggs[0]["metrics"]["total_tokens"]["median"], 100)
+
+    def test_trennt_harnesses_und_modelle(self):
+        results = [
+            _res("pi", model="Haiku 4.5"),
+            _res("claude-code", model="Haiku 4.5"),
+            _res("pi", model="Sonnet 4.6"),
+        ]
+        aggs = stats.build_aggregates(results)
+        keys = {(a["harness"], a["model_label"]) for a in aggs}
+        self.assertEqual(keys, {("pi", "Haiku 4.5"), ("claude-code", "Haiku 4.5"), ("pi", "Sonnet 4.6")})
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -8,6 +8,7 @@ Nur Python-Standardbibliothek (statistics).
 """
 
 import statistics
+from collections import defaultdict
 
 
 def median(values: list[float]) -> float:
@@ -67,3 +68,48 @@ def summary(values: list[float]) -> dict:
         "iqr": iqr(values),
         "rel_spread": rel_spread(values),
     }
+
+
+# Metriken, die je Kombination aggregiert werden (Feldname -> Funktion auf result-dict)
+_METRICS = {
+    "total_tokens": lambda r: r["usage"]["total_tokens"],
+    "input_tokens": lambda r: r["usage"]["input_tokens"],
+    "output_tokens": lambda r: r["usage"]["output_tokens"],
+    "cache_read": lambda r: r["usage"]["cache_read"],
+    "cache_write": lambda r: r["usage"]["cache_write"],
+    "overhead": lambda r: (r["usage"]["input_tokens"]
+                           + r["usage"]["cache_read"]
+                           + r["usage"]["cache_write"]),
+    "cost_usd": lambda r: r["usage"]["cost_usd"],
+    "duration_ms": lambda r: r["duration_ms"],
+}
+
+
+def build_aggregates(results: list[dict]) -> list[dict]:
+    """Aggregiert die Roh-Ergebnisse je (task_id, model_label, harness) zu
+    Median+Streuung pro Metrik. Fehlerhafte Laeufe werden ausgeschlossen.
+
+    Liefert eine Liste von dicts mit: task_id, model_label, task_complexity,
+    harness, n, metrics={metrik: summary(...)}. So koennen UI und Report die
+    belastbaren Zahlen anzeigen, ohne sie selbst neu zu berechnen.
+    """
+    groups: dict[tuple[str, str, str], list[dict]] = defaultdict(list)
+    for r in results:
+        if r.get("error"):
+            continue
+        groups[(r["task_id"], r["model_label"], r["harness"])].append(r)
+
+    out = []
+    for (task_id, model_label, harness), rows in groups.items():
+        metrics = {
+            name: summary([fn(r) for r in rows]) for name, fn in _METRICS.items()
+        }
+        out.append({
+            "task_id": task_id,
+            "model_label": model_label,
+            "task_complexity": rows[0].get("task_complexity"),
+            "harness": harness,
+            "n": len(rows),
+            "metrics": metrics,
+        })
+    return out
