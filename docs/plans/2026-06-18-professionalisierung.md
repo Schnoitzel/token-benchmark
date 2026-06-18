@@ -110,8 +110,8 @@ Realmessungen sind aber jederzeit reproduzierbar abrufbar.
   korrigiert (Overhead=input+cache_read+cache_write, Pi ohne Cache vs CC mit
   Prompt-Cache, ~9,5× Token / ~5× Kosten), Verweis auf docs/methodik.md.
 - [x] 2.3 `stats.py`: `median`, `stdev`, `iqr`, `min/max`, `rel_spread`, `n` + `summary()`. — 10 Tests, grün.
-- [ ] 2.4 `core.py`: Streuungs-Kennzahlen je Kombination in die Suite-JSON
-  aufnehmen (damit UI/Report sie ohne Neuberechnung zeigen können).
+- [x] 2.4 `core.py`: Aggregate (Median+Streuung je Kombination) via
+  stats.build_aggregates in suite['aggregates']. — 5 Tests, grün.
 - [ ] 2.5 `report.py`: Median **+ Streuung/Spanne + n** je Kennzahl ausweisen;
   Hinweis, ab welchem `n` die Aussage belastbar ist.
 - [ ] 2.6 Default-`repeat` für Baseline überdenken (Vorschlag: 5) und begründen.
