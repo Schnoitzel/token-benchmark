@@ -255,6 +255,28 @@
     transition: .2s;
   }
   .present-close:hover { background: var(--panel-2); }
+  .present-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 24px;
+    color: var(--text);
+    transition: .2s;
+    opacity: 0.7;
+  }
+  .present-nav:hover { opacity: 1; background: var(--panel-2); }
+  .present-nav.left { left: 30px; }
+  .present-nav.right { right: 30px; }
+  .present-nav:disabled { opacity: 0.3; cursor: not-allowed; }
   .present-content {
     max-width: 1200px;
     width: 100%;
@@ -309,6 +331,84 @@
     color: var(--muted);
     margin-top: 30px;
   }
+
+  /* Print-Styles */
+  @media print {
+    /* Nur Ergebnisse zeigen, Konfiguration/Steuerung/Log ausblenden */
+    header, .card:not(#resultsCard), #progressCard, .btn, .controls, .toolbar, .theme-toggle {
+      display: none !important;
+    }
+    
+    /* Heller Hintergrund, dunkler Text (unabhängig vom Theme) */
+    :root, [data-theme="dark"], [data-theme="light"] {
+      --bg: #ffffff !important;
+      --panel: #ffffff !important;
+      --panel-2: #f8f9fa !important;
+      --border: #dee2e6 !important;
+      --text: #212529 !important;
+      --muted: #6c757d !important;
+      --pi: #059669 !important;
+      --cc: #a21caf !important;
+    }
+    
+    body {
+      background: white;
+      color: #212529;
+      padding: 20px;
+    }
+    
+    .wrap {
+      max-width: 100%;
+      padding: 0;
+    }
+    
+    #resultsCard {
+      display: block !important;
+      box-shadow: none;
+      border: none;
+      page-break-inside: avoid;
+    }
+    
+    .card {
+      box-shadow: none;
+      page-break-inside: avoid;
+    }
+    
+    h2 {
+      color: #212529 !important;
+      page-break-after: avoid;
+    }
+    
+    .section-title {
+      page-break-after: avoid;
+    }
+    
+    table, .cmp {
+      page-break-inside: avoid;
+    }
+    
+    tr {
+      page-break-inside: avoid;
+    }
+    
+    details {
+      border: 1px solid #dee2e6;
+    }
+    
+    details[open] summary {
+      border-bottom: 1px solid #dee2e6;
+      page-break-after: avoid;
+    }
+    
+    .price-note, .drill-panel, .resp-box, .prompt-box {
+      page-break-inside: avoid;
+    }
+    
+    /* Präsentieren-Overlay ausblenden */
+    .present-overlay {
+      display: none !important;
+    }
+  }
 </style>
 </head>
 <body>
@@ -326,7 +426,9 @@
 
   <!-- Konfiguration -->
   <div class="card">
-    <h2>1 · Konfiguration <span class="sub">Was soll getestet werden?</span></h2>
+    <h2>Neuen Benchmark starten</h2>
+    <p style="font-size:14px;color:var(--muted);margin:0 0 20px">Wähle Harnesses, Modelle und Aufgaben — und führe einen neuen Benchmark-Lauf durch.</p>
+    <h3 style="font-size:16px;font-weight:600;margin:0 0 16px">1 · Konfiguration</h3>
 
     <div class="group">
       <label class="title">Harnesses</label>
@@ -378,8 +480,11 @@
     <div class="controls">
       <button class="btn" id="startBtn" onclick="startRun()">▶ Benchmark starten</button>
       <button class="btn ghost" id="presentBtn" onclick="openPresent()" style="display:none">▶ Präsentieren</button>
+      <button class="btn ghost" id="exportBtn" onclick="exportReport()" style="display:none" title="Markdown-Bericht herunterladen">⬇ Bericht (.md)</button>
+      <button class="btn ghost" id="printBtn" onclick="window.print()" style="display:none" title="Seite drucken oder als PDF speichern">🖨 Drucken / PDF</button>
       <span class="est">Geplant: <b id="estRuns">0</b> Läufe</span>
     </div>
+    <div id="runError" style="display:none;margin-top:12px;padding:12px;background:var(--bad);color:#fff;border:2px solid var(--bad);border-radius:8px;font-weight:600"></div>
     <div class="hint">Tipp: Zum Ausprobieren erst „Nur trivial“ + ein Modell wählen — das ist schnell und günstig.</div>
   </div>
 
@@ -420,10 +525,11 @@
 
   <!-- Frühere Läufe -->
   <div class="card">
-    <h2>📂 Frühere Läufe ansehen</h2>
+    <h2>Früheren Lauf ansehen</h2>
+    <p style="font-size:14px;color:var(--muted);margin:0 0 16px">Lade die Ergebnisse eines bereits durchgeführten Benchmarks — ohne erneute API-Kosten.</p>
     <div class="controls">
       <select id="pastRuns"><option value="">— auswählen —</option></select>
-      <button class="btn ghost" onclick="loadPast()">Laden</button>
+      <button class="btn ghost" id="loadPastBtn" onclick="loadPast()">Laden</button>
       <button class="btn ghost" onclick="refreshPast()">Aktualisieren</button>
     </div>
   </div>
@@ -433,6 +539,8 @@
 <!-- Präsentieren-Overlay -->
 <div class="present-overlay" id="presentOverlay">
   <button class="present-close" onclick="closePresent()">✕ Schließen</button>
+  <button class="present-nav left" id="presentPrev" onclick="showPresentSlide(presentSlideIndex - 1)">←</button>
+  <button class="present-nav right" id="presentNext" onclick="showPresentSlide(presentSlideIndex + 1)">→</button>
   <div class="present-content">
     <div class="present-title">🎯 Benchmark-Ergebnisse auf einen Blick</div>
     <div class="present-cards" id="presentCards"></div>
@@ -555,7 +663,30 @@ bindChips(document.getElementById('harnesses'));
 // --- Lauf starten ----------------------------------------------------------
 let allResults = [];
 
+// Sperrt/entsperrt alle relevanten Eingaben
+function lockInputs(lock) {
+  document.getElementById('startBtn').disabled = lock;
+  document.getElementById('loadPastBtn').disabled = lock;
+  document.querySelectorAll('#harnesses input, #models input, #tasks input').forEach(inp => inp.disabled = lock);
+  document.getElementById('customPrompt').disabled = lock;
+  document.getElementById('customUseTools').disabled = lock;
+  document.getElementById('delay').disabled = lock;
+  document.getElementById('repeat').disabled = lock;
+  document.querySelectorAll('.toolbar button').forEach(btn => btn.disabled = lock);
+}
+
+function showError(msg) {
+  const el = document.getElementById('runError');
+  el.textContent = '⚠ Fehler: ' + msg;
+  el.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('runError').style.display = 'none';
+}
+
 function startRun() {
+  hideError();
   const harnesses = getChecked('harnesses');
   const models = getChecked('models');
   const tasks = getChecked('tasks');
@@ -563,11 +694,11 @@ function startRun() {
   const customUseTools = document.getElementById('customUseTools').checked;
 
   if (!harnesses.length || !models.length) {
-    alert('Bitte mindestens je 1 Harness und Modell wählen.');
+    showError('Bitte mindestens je 1 Harness und Modell wählen.');
     return;
   }
   if (!customPrompt && !tasks.length) {
-    alert('Bitte mindestens 1 Aufgabe wählen – oder einen eigenen Prompt eingeben.');
+    showError('Bitte mindestens 1 Aufgabe wählen – oder einen eigenen Prompt eingeben.');
     return;
   }
   const delay = document.getElementById('delay').value || '2';
@@ -587,9 +718,10 @@ function startRun() {
   }
 
   // UI vorbereiten
-  document.getElementById('startBtn').disabled = true;
+  lockInputs(true);
   document.getElementById('progressCard').style.display = 'block';
   document.getElementById('resultsCard').style.display = 'none';
+  document.getElementById('progressSub').textContent = 'läuft …';
   const log = document.getElementById('log');
   log.innerHTML = '';
   document.getElementById('pbar').style.width = '0%';
@@ -598,18 +730,30 @@ function startRun() {
   const es = new EventSource('/api/run?' + params.toString());
 
   es.onmessage = ev => {
-    const d = JSON.parse(ev.data);
-    handleEvent(d, log);
-    if (d.type === 'done') {
+    try {
+      const d = JSON.parse(ev.data);
+      handleEvent(d, log);
+      if (d.type === 'done') {
+        es.close();
+        lockInputs(false);
+        document.getElementById('progressSub').textContent = 'fertig';
+        refreshPast();
+      }
+    } catch (err) {
+      // Niemals dauerhaft gesperrt bleiben, falls ein Event fehlerhaft ist.
       es.close();
-      document.getElementById('startBtn').disabled = false;
-      refreshPast();
+      lockInputs(false);
+      document.getElementById('progressSub').textContent = 'Fehler';
+      showError('Unerwarteter Fehler bei der Auswertung: ' + err.message);
+      addLog(log, '<span class="err">✗ ' + err.message + '</span>', '');
     }
   };
   es.onerror = () => {
     es.close();
-    document.getElementById('startBtn').disabled = false;
-    addLog(log, 'Verbindung beendet.', 'dim');
+    lockInputs(false);
+    document.getElementById('progressSub').textContent = 'abgebrochen';
+    showError('Verbindung zum Server unterbrochen — bitte erneut versuchen.');
+    addLog(log, '<span class="err">✗ Verbindung unterbrochen</span>', '');
   };
 }
 
@@ -641,7 +785,8 @@ function handleEvent(d, log) {
     allResults.push(r);
     const hcls = r.harness === 'pi' ? 'pi' : 'cc';
     if (r.error) {
-      addLog(log, `   <span class="err">✗ FEHLER</span> ${r.error.substring(0,120)}`, '');
+      const shortErr = r.error.substring(0,120);
+      addLog(log, `   <span class="err">✗ FEHLER: ${shortErr}${r.error.length > 120 ? '…' : ''}</span>`, '');
     } else {
       addLog(log, `   <span class="ok">✓</span> <span class="${hcls}">${r.harness}</span> ` +
         `total=<b>${fmtN(u.total_tokens)}</b> (cache=${fmtN(u.cache_read+u.cache_write)} out=${u.output_tokens}) ` +
@@ -683,7 +828,11 @@ function judgeRun() {
       renderQuality(d.quality);
     }
   };
-  es.onerror = () => { es.close(); btn.disabled = false; status.textContent = 'Verbindung beendet.'; };
+  es.onerror = () => {
+    es.close();
+    btn.disabled = false;
+    status.innerHTML = '<span style="color:var(--bad)">⚠ Verbindung unterbrochen — bitte erneut versuchen.</span>';
+  };
 }
 
 function renderQuality(quality) {
@@ -735,7 +884,13 @@ function renderResults(suite) {
   currentSuite = suite;
   const res = suite.results;
   document.getElementById('resultsCard').style.display = 'block';
-  document.getElementById('resultsSub').textContent = `Run ${suite.run_id} · ${res.length} Läufe`;
+  const errCount = res.filter(r => r.error).length;
+  const sub = document.getElementById('resultsSub');
+  sub.textContent = `Run ${suite.run_id} · ${res.length} Läufe`;
+  if (errCount > 0) {
+    sub.innerHTML += ` <span style="background:var(--bad);color:#fff;padding:2px 9px;`
+      + `border-radius:6px;font-size:12px;margin-left:8px">⚠ ${errCount} fehlgeschlagen</span>`;
+  }
   renderQuality(suite.quality || null);
   document.getElementById('judgeStatus').textContent = '';
   document.getElementById('judgeBtn').disabled = false;
@@ -928,8 +1083,11 @@ function renderResults(suite) {
   // Provenienz rendern
   renderProvenance(suite);
 
-  // Präsentieren-Button aktivieren
+  // Export/Präsentieren-Buttons aktivieren (nur wenn run_id vorhanden)
+  const hasRunId = suite.run_id && /^[A-Za-z0-9_-]+$/.test(suite.run_id);
   document.getElementById('presentBtn').style.display = 'inline-block';
+  document.getElementById('exportBtn').style.display = hasRunId ? 'inline-block' : 'none';
+  document.getElementById('printBtn').style.display = 'inline-block';
 
   // Overhead-Chart pro Modell
   const models = [...new Set(res.map(r => r.model_label))];
@@ -973,10 +1131,14 @@ function renderResults(suite) {
   ).forEach(r => {
     const u = r.usage;
     const hcls = r.harness==='pi'?'pi':'cc';
-    const err = r.error ? ' ⚠️' : '';
+    let errBadge = '';
+    if (r.error) {
+      const shortErr = r.error.length > 40 ? r.error.substring(0,40) + '…' : r.error;
+      errBadge = ` <span style="background:var(--bad);color:#fff;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600" title="${r.error.replace(/"/g, '&quot;')}">⚠ ${shortErr}</span>`;
+    }
     tbody.innerHTML += `<tr>
       <td>${r.task_id}</td><td>${r.model_label}</td>
-      <td><span class="pill ${hcls}">${r.harness}${err}</span></td>
+      <td><span class="pill ${hcls}">${r.harness}</span>${errBadge}</td>
       <td>${fmtN(u.input_tokens)}</td>
       <td>${fmtN(u.cache_read)}</td>
       <td>${fmtN(u.cache_write)}</td>
@@ -1155,10 +1317,47 @@ function renderProvenance(suite) {
   el.innerHTML = html;
 }
 
-function openPresent() {
+function exportReport() {
+  if (!currentSuite || !currentSuite.run_id) return;
+  const runId = currentSuite.run_id;
+  if (!/^[A-Za-z0-9_-]+$/.test(runId)) {
+    alert('Ungültige run_id — Export nicht möglich.');
+    return;
+  }
+  // Download via unsichtbarem Link triggern
+  // Erst laden und Fehler abfangen, sonst landet eine Fehler-JSON in der .md.
+  fetch('/api/report?run_id=' + encodeURIComponent(runId))
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); })
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `benchmark-${runId}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    })
+    .catch(err => alert('Export fehlgeschlagen: ' + err.message));
+}
+
+let presentSlideIndex = 0;
+const PRESENT_SLIDES = ['overview', 'tokens', 'cost', 'quality'];
+
+function closePresent() {
+  document.getElementById('presentOverlay').classList.remove('show');
+  presentSlideIndex = 0;
+}
+
+function showPresentSlide(index) {
+  presentSlideIndex = Math.max(0, Math.min(index, PRESENT_SLIDES.length - 1));
+  renderPresentSlide();
+}
+
+function renderPresentSlide() {
   if (!currentSuite) return;
   
-  // Faktoren berechnen (aus baseline-aggregates oder allen)
+  // Faktoren berechnen
   let tokenFactor = 0, costFactor = 0, qualityDelta = 0, qualityAvailable = false;
   
   if (currentSuite.aggregates && currentSuite.aggregates.length > 0) {
@@ -1200,27 +1399,96 @@ function openPresent() {
   }
   
   const cards = document.getElementById('presentCards');
-  cards.innerHTML = `
-    <div class="present-card">
-      <div class="present-card-label">Token-Overhead-Faktor</div>
-      <div class="present-card-value bad">${tokenFactor > 0 ? tokenFactor.toFixed(1) + '×' : 'n/a'}</div>
-      <div class="present-card-desc">Claude Code hat <b>${tokenFactor > 0 ? tokenFactor.toFixed(1) + '×' : '?'}</b> mehr System-Prompt-Overhead (Cache-Tokens) als Pi.</div>
-    </div>
-    <div class="present-card">
-      <div class="present-card-label">Kosten-Faktor</div>
-      <div class="present-card-value bad">${costFactor > 0 ? costFactor.toFixed(1) + '×' : 'n/a'}</div>
-      <div class="present-card-desc">Claude Code kostet <b>${costFactor > 0 ? costFactor.toFixed(1) + '×' : '?'}</b> mehr als Pi (bei identischen Prompts & Modellen).</div>
-    </div>
-    <div class="present-card">
-      <div class="present-card-label">Qualitäts-Delta</div>
-      <div class="present-card-value ${qualityAvailable ? (Math.abs(qualityDelta) < 0.25 ? 'good' : (qualityDelta > 0 ? 'bad' : 'good')) : 'neutral'}">${qualityAvailable ? (Math.abs(qualityDelta) < 0.25 ? '≈ 0' : (qualityDelta > 0 ? '+' : '') + qualityDelta.toFixed(2)) : '?'}</div>
-      <div class="present-card-desc">${qualityAvailable ? (Math.abs(qualityDelta) < 0.25 ? '<b>Kein bedeutsamer Unterschied</b> in der Antwortqualität.' : (qualityDelta > 0 ? 'Claude Code im Schnitt <b>+' + qualityDelta.toFixed(2) + ' Punkte</b> besser.' : 'Pi im Schnitt <b>+' + (-qualityDelta).toFixed(2) + ' Punkte</b> besser.')) : 'Noch nicht bewertet — Button „Qualität bewerten“ nutzen.'}</div>
-    </div>
+  const footer = document.getElementById('presentFooter');
+  const slide = PRESENT_SLIDES[presentSlideIndex];
+  
+  if (slide === 'overview') {
+    // Slide 1: Übersicht (alle 3 Zahlen)
+    cards.innerHTML = `
+      <div class="present-card">
+        <div class="present-card-label">Token-Overhead-Faktor</div>
+        <div class="present-card-value bad">${tokenFactor > 0 ? tokenFactor.toFixed(1) + '×' : 'n/a'}</div>
+        <div class="present-card-desc">Claude Code hat <b>${tokenFactor > 0 ? tokenFactor.toFixed(1) + '×' : '?'}</b> mehr System-Prompt-Overhead (Cache-Tokens) als Pi.</div>
+      </div>
+      <div class="present-card">
+        <div class="present-card-label">Kosten-Faktor</div>
+        <div class="present-card-value bad">${costFactor > 0 ? costFactor.toFixed(1) + '×' : 'n/a'}</div>
+        <div class="present-card-desc">Claude Code kostet <b>${costFactor > 0 ? costFactor.toFixed(1) + '×' : '?'}</b> mehr als Pi (bei identischen Prompts & Modellen).</div>
+      </div>
+      <div class="present-card">
+        <div class="present-card-label">Qualitäts-Delta</div>
+        <div class="present-card-value ${qualityAvailable ? (Math.abs(qualityDelta) < 0.25 ? 'good' : (qualityDelta > 0 ? 'bad' : 'good')) : 'neutral'}">${qualityAvailable ? (Math.abs(qualityDelta) < 0.25 ? '≈ 0' : (qualityDelta > 0 ? '+' : '') + qualityDelta.toFixed(2)) : '?'}</div>
+        <div class="present-card-desc">${qualityAvailable ? (Math.abs(qualityDelta) < 0.25 ? '<b>Kein bedeutsamer Unterschied</b> in der Antwortqualität.' : (qualityDelta > 0 ? 'Claude Code im Schnitt <b>+' + qualityDelta.toFixed(2) + ' Punkte</b> besser.' : 'Pi im Schnitt <b>+' + (-qualityDelta).toFixed(2) + ' Punkte</b> besser.')) : 'Noch nicht bewertet — Button „Qualität bewerten“ nutzen.'}</div>
+      </div>
+    `;
+  } else if (slide === 'tokens') {
+    // Slide 2: Token-Overhead (groß)
+    cards.innerHTML = `
+      <div class="present-card" style="grid-column:1/-1;max-width:700px;margin:0 auto">
+        <div class="present-card-label">System-Prompt-Overhead</div>
+        <div class="present-card-value bad" style="font-size:120px">${tokenFactor > 0 ? tokenFactor.toFixed(1) + '×' : 'n/a'}</div>
+        <div class="present-card-desc" style="font-size:18px">Claude Code hat <b>${tokenFactor > 0 ? tokenFactor.toFixed(1) : '?'}× mehr Cache-Tokens</b> (Input + Cache-Read + Cache-Write) pro Anfrage als Pi — bei <b>identischen Prompts und Modellen</b>.</div>
+      </div>
+    `;
+  } else if (slide === 'cost') {
+    // Slide 3: Kosten-Faktor (groß)
+    cards.innerHTML = `
+      <div class="present-card" style="grid-column:1/-1;max-width:700px;margin:0 auto">
+        <div class="present-card-label">Kosten-Mehrverbrauch</div>
+        <div class="present-card-value bad" style="font-size:120px">${costFactor > 0 ? costFactor.toFixed(1) + '×' : 'n/a'}</div>
+        <div class="present-card-desc" style="font-size:18px">Claude Code kostet <b>${costFactor > 0 ? costFactor.toFixed(1) : '?'}× mehr</b> als Pi pro Anfrage. Der Faktor ist kleiner als der Token-Faktor, weil Cache-Read-Tokens billiger sind (0,1× statt 1×).</div>
+      </div>
+    `;
+  } else if (slide === 'quality') {
+    // Slide 4: Qualität
+    if (qualityAvailable) {
+      const qualityClass = Math.abs(qualityDelta) < 0.25 ? 'good' : (qualityDelta > 0 ? 'bad' : 'good');
+      const qualityText = Math.abs(qualityDelta) < 0.25 ? '≈ 0' : (qualityDelta > 0 ? '+' : '') + qualityDelta.toFixed(2);
+      const qualityDesc = Math.abs(qualityDelta) < 0.25 
+        ? '<b>Kein bedeutsamer Qualitätsunterschied</b> zwischen Pi und Claude Code (blinder Opus-Richter, Swap-Test).'
+        : (qualityDelta > 0 
+          ? 'Claude Code im Schnitt <b>+' + qualityDelta.toFixed(2) + ' Punkte</b> besser (1–5-Skala, Opus-Richter).'
+          : 'Pi im Schnitt <b>+' + (-qualityDelta).toFixed(2) + ' Punkte</b> besser (1–5-Skala, Opus-Richter).');
+      cards.innerHTML = `
+        <div class="present-card" style="grid-column:1/-1;max-width:700px;margin:0 auto">
+          <div class="present-card-label">Qualitäts-Delta</div>
+          <div class="present-card-value ${qualityClass}" style="font-size:120px">${qualityText}</div>
+          <div class="present-card-desc" style="font-size:18px">${qualityDesc}</div>
+        </div>
+      `;
+    } else {
+      cards.innerHTML = `
+        <div class="present-card" style="grid-column:1/-1;max-width:700px;margin:0 auto">
+          <div class="present-card-label">Qualitäts-Delta</div>
+          <div class="present-card-value neutral" style="font-size:120px">?</div>
+          <div class="present-card-desc" style="font-size:18px">Noch nicht bewertet — Button „Qualität bewerten“ in den Ergebnissen nutzen (blinder Opus-Richter, Swap-Test).</div>
+        </div>
+      `;
+    }
+  }
+  
+  // Footer mit Run-Info + Slide-Indikator
+  const dots = PRESENT_SLIDES.map((s, i) => 
+    `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${i===presentSlideIndex?'var(--accent)':'var(--muted)'};margin:0 4px;opacity:${i===presentSlideIndex?'1':'0.5'}"></span>`
+  ).join('');
+  
+  footer.innerHTML = `
+    <div style="margin-bottom:14px">${dots}</div>
+    <div>Run ${currentSuite.run_id} · ${currentSuite.results.length} Läufe${currentSuite.provenance && currentSuite.provenance.repeat ? ' (×' + currentSuite.provenance.repeat + ' Wiederholungen)' : ''}</div>
+    <div style="font-size:12px;margin-top:8px;opacity:0.7">← / → zum Navigieren · ESC zum Schließen</div>
   `;
   
-  const footer = document.getElementById('presentFooter');
-  footer.innerHTML = `Run ${currentSuite.run_id} · ${currentSuite.results.length} Läufe${currentSuite.provenance && currentSuite.provenance.repeat ? ' (×' + currentSuite.provenance.repeat + ' Wiederholungen)' : ''}`;
-  
+  // Navigation-Buttons aktivieren/deaktivieren
+  const prevBtn = document.getElementById('presentPrev');
+  const nextBtn = document.getElementById('presentNext');
+  if (prevBtn) prevBtn.disabled = presentSlideIndex === 0;
+  if (nextBtn) nextBtn.disabled = presentSlideIndex === PRESENT_SLIDES.length - 1;
+}
+
+function openPresent() {
+  if (!currentSuite) return;
+  presentSlideIndex = 0;
+  renderPresentSlide();
   document.getElementById('presentOverlay').classList.add('show');
 }
 
@@ -1256,25 +1524,36 @@ async function refreshPast() {
     sel.innerHTML += `<option value="${it.run_id}">${parts.join('  ·  ')}</option>`;
   });
 }
+
+// Einen gespeicherten Lauf laden und darstellen.
 async function loadPast() {
-  const id = document.getElementById('pastRuns').value;
-  if (!id) return;
-  const r = await fetch('/api/result?run_id=' + id);
-  const suite = await r.json();
-  renderResults(suite);
+  const runId = document.getElementById('pastRuns').value;
+  if (!runId) { showError('Bitte zuerst einen Lauf auswählen.'); return; }
+  hideError();
+  try {
+    const r = await fetch('/api/result?run_id=' + encodeURIComponent(runId));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const suite = await r.json();
+    renderResults(suite);
+    document.getElementById('resultsCard').scrollIntoView({ behavior: 'smooth' });
+  } catch (err) {
+    showError('Lauf konnte nicht geladen werden: ' + err.message);
+  }
 }
 
-function closePresent() {
-  document.getElementById('presentOverlay').classList.remove('show');
-}
-
-// ESC-Taste zum Schließen
+// Tastatur-Navigation für Präsentieren-Overlay
 document.addEventListener('keydown', e => {
+  const overlay = document.getElementById('presentOverlay');
+  if (!overlay.classList.contains('show')) return;
+  
   if (e.key === 'Escape') {
-    const overlay = document.getElementById('presentOverlay');
-    if (overlay.classList.contains('show')) {
-      closePresent();
-    }
+    closePresent();
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    showPresentSlide(presentSlideIndex - 1);
+  } else if (e.key === 'ArrowRight') {
+    e.preventDefault();
+    showPresentSlide(presentSlideIndex + 1);
   }
 });
 

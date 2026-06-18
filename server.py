@@ -183,11 +183,12 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "ungueltige run_id"}, status=400)
                 return
             fp = os.path.join(HERE, "results", f"benchmark-{run_id}.json")
-            if not os.path.exists(fp):
+            try:
+                with open(fp, encoding="utf-8") as f:
+                    suite = json.load(f)
+            except FileNotFoundError:
                 self._send_json({"error": "not found"}, status=404)
                 return
-            with open(fp, encoding="utf-8") as f:
-                suite = json.load(f)
             md = report.build_markdown(suite)
             self._send_download(md, f"benchmark-{run_id}.md", "text/markdown; charset=utf-8")
             return
