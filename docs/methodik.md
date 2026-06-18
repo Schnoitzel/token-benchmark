@@ -35,6 +35,22 @@ beide Harnesses in leerer Sandbox:
 
 **Faktor Overhead CC/Pi: ~9,55×.**
 
+### Modelluebergreifender Referenzlauf
+
+Run `dcf6c6db` (Baseline, alle drei Modelle, je 3 Wiederholungen) zeigt, dass der
+Effekt **modelluebergreifend** besteht (Rohdaten + Report versioniert unter
+[`docs/evidence/`](evidence/)):
+
+| Modell | Pi Overhead (median) | Claude Code Overhead (median) | Faktor |
+|--------|---------------------:|------------------------------:|-------:|
+| Haiku 4.5 | 3.070 | 29.294 | ~9,5× |
+| Sonnet 4.6 | 3.069 | 28.465 | ~9,3× |
+| Opus 4.8 | 3.786 | 27.256 | ~7,2× |
+
+Streuung in allen Faellen < 0,1 % (max−min weniger als ~6 Tokens). Die Aussage
+„Claude Code schickt ein Vielfaches an Overhead pro Anfrage“ ist damit robust
+und nicht modellspezifisch.
+
 ### Was das bedeutet (wichtig fuer die Ehrlichkeit der Aussage)
 
 1. **Pi nutzt in dieser blank/ephemeren Konfiguration kein Prompt-Caching.**
