@@ -82,8 +82,8 @@ Realmessungen sind aber jederzeit reproduzierbar abrufbar.
   (eine Pi-JSONL, eine Claude-JSON) — Grundlage für Parser-Tests. — erledigt.
   Befund: Pi `input=3068`, cache=0; CC overhead ~29k (`cache_read=21506`,
   `cache_write=7714`) → ~9,5×. Fliesst in Phase 2.1/methodik.md ein.
-- [ ] 1.3 `tests/test_pricing.py`: bekannte Modelle, Cache-Faktoren, unbekanntes
-  Modell → `None`, dict- und Objekt-Eingabe.
+- [x] 1.3 `tests/test_pricing.py`: bekannte Modelle, Cache-Faktoren, unbekanntes
+  Modell → `None`, dict- und Objekt-Eingabe. — 11 Tests, grün.
 - [ ] 1.4 `tests/test_judge.py`: `extract_json` (Code-Fences/Begleittext/kaputt),
   `map_winner` über beide Swap-Durchläufe, Bias→tie, `overall`-Mittel.
 - [ ] 1.5 `tests/test_runners.py`: Parsing aus Fixtures (subprocess.run gemockt,
