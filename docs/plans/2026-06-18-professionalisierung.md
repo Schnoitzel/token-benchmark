@@ -5,7 +5,7 @@
 - **Branch/Worktree:** main (kleine, in sich geschlossene Schritte; bei Bedarf Feature-Branches)
 
 ## Problem
-Der POC funktioniert und ist sauber strukturiert, aber für die „Summer Show"
+Der POC funktioniert und ist sauber strukturiert, aber für die "Summer Show"
 und einen kritischen Auftritt fehlen drei Dinge: ein **Engineering-Fundament**
 (Git ✅, Tests ❌), **wasserdichte, belastbare Zahlen** (Statistik, verifizierte
 Cache-Semantik) und eine **show-taugliche, nachvollziehbare Darstellung** in der
@@ -32,9 +32,9 @@ Strikte Reihenfolge **1 → 2 → 3** (vom Nutzer bestätigt). Jede Phase endet 
 einem lauffähigen, committeten Zustand.
 
 **Entscheidung Test-Framework:** stdlib `unittest` statt `pytest`. Begründung:
-Das Alleinstellungsmerkmal des Projekts ist „null Abhängigkeiten, pur Python".
+Das Alleinstellungsmerkmal des Projekts ist "null Abhängigkeiten, pur Python".
 Mit `unittest` läuft die Test-Suite überall ohne Installation
-(`python3 -m unittest`) — konsistent mit der Projekt-DNA und ein starkes
+(`python3 -m unittest`) - konsistent mit der Projekt-DNA und ein starkes
 Argument vor technischem Publikum. (Aufwand ggü. pytest minimal.)
 
 **Entscheidung reale Mess-Tests:** kosten Geld/Zeit und brauchen `pi`/`claude`
@@ -76,28 +76,29 @@ Realmessungen sind aber jederzeit reproduzierbar abrufbar.
 
 ## Task Breakdown
 
-### Phase 1 — Engineering-Fundament & Tests
-- [x] 1.1 `docs/plans/` + diesen Plan committen. — erledigt (Commit `caa3629`).
+### Phase 1 - Engineering-Fundament & Tests
+- [x] 1.1 `docs/plans/` + diesen Plan committen. - erledigt (Commit `caa3629`).
 - [x] 1.2 Echte Beispielausgaben einmal real erzeugen und als Fixtures ablegen
-  (eine Pi-JSONL, eine Claude-JSON) — Grundlage für Parser-Tests. — erledigt.
+  (eine Pi-JSONL, eine Claude-JSON) - Grundlage für Parser-Tests. - erledigt.
   Befund: Pi `input=3068`, cache=0; CC overhead ~29k (`cache_read=21506`,
   `cache_write=7714`) → ~9,5×. Fliesst in Phase 2.1/methodik.md ein.
 - [x] 1.3 `tests/test_pricing.py`: bekannte Modelle, Cache-Faktoren, unbekanntes
-  Modell → `None`, dict- und Objekt-Eingabe. — 11 Tests, grün.
+  Modell → `None`, dict- und Objekt-Eingabe. - 11 Tests, grün.
 - [x] 1.4 `tests/test_judge.py`: `extract_json` (Code-Fences/Begleittext/kaputt),
-  `map_winner` über beide Swap-Durchläufe, Bias→tie, `overall`-Mittel. — 18 Tests, grün.
+  `map_winner` über beide Swap-Durchläufe, Bias→tie, `overall`-Mittel. - 18 Tests, grün.
 - [x] 1.5 `tests/test_runners.py`: Parsing aus Fixtures (subprocess.run gemockt,
-  inkl. Timeout- und Fehlerpfad). — 9 Tests, grün.
+  inkl. Timeout- und Fehlerpfad). - 9 Tests, grün.
 - [x] 1.6 `tests/test_report.py`: `med`/`spread`/`ratio`/`_overhead_rows`,
-  Baseline-Bevorzugung, Fehler-Ausschluss. — 11 Tests, grün.
+  Baseline-Bevorzugung, Fehler-Ausschluss. - 11 Tests, grün.
 - [x] 1.7 `tests/test_core.py`: Filter + `apply_unified_cost` (Harness-Wert bleibt
-  in `cost_harness_usd`, `cost_usd` wird einheitlich überschrieben). — 9 Tests, grün.
-- [ ] 1.8 README: Abschnitt „Tests" (`python3 -m unittest discover -s tests`).
-- [ ] 1.9 (optional) GitHub-Actions-Workflow für Unit-Tests. Commit + Push.
+  in `cost_harness_usd`, `cost_usd` wird einheitlich überschrieben). - 9 Tests, grün.
+- [x] 1.8 README: Abschnitt „Tests“ (`python3 -m unittest discover -s tests`). — erledigt.
+- [x] 1.9 GitHub-Actions-Workflow für Unit-Tests (öffentlich, gratis; nur Mocks,
+  keine Live-Kosten). — erledigt (`.github/workflows/tests.yml`).
 
-### Phase 2 — Zahlen wasserdicht (Methodik)
+### Phase 2 - Zahlen wasserdicht (Methodik)
 - [ ] 2.1 **Cache-Semantik verifizieren:** Baseline real laufen lassen, Rohdaten
-  inspizieren — zahlt jeder frische Subprozess `cache_write`, ist `cache_read`≈0?
+  inspizieren - zahlt jeder frische Subprozess `cache_write`, ist `cache_read`≈0?
   Befund in `docs/methodik.md` festhalten.
 - [ ] 2.2 Overhead-Erzählung an Befund angleichen (Report-/UI-Texte): Overhead =
   `input + cache_write (+ cache_read)`, klar erklärt, keine angreifbare Formulierung.
@@ -114,19 +115,19 @@ Realmessungen sind aber jederzeit reproduzierbar abrufbar.
 - [ ] 2.9 Einen belastbaren Referenzlauf erzeugen, Befund + Zahlen in
   `docs/methodik.md` dokumentieren. Commit + Push.
 
-### Phase 3 — Show-ready (Präsentation & Nachvollziehbarkeit)
+### Phase 3 - Show-ready (Präsentation & Nachvollziehbarkeit)
 - [ ] 3.1 **Methodik-/Provenienz-Panel** in der UI: Versionen, Flags, Sandbox,
-  Preise, Cache-Faktoren, n — immer einsehbar (aus `provenance`).
+  Preise, Cache-Faktoren, n - immer einsehbar (aus `provenance`).
 - [ ] 3.2 **Drill-down je Kennzahl:** von jeder KPI/Balken/Tabelle zu den
-  Roh-Tokens und der Rechenformel (Tooltip/Aufklapp „Wie wurde das erhoben?").
-- [ ] 3.3 Streuung in der UI sichtbar (Fehlerbalken/Spanne, n-Anzeige) — KPI-Kacheln
+  Roh-Tokens und der Rechenformel (Tooltip/Aufklapp "Wie wurde das erhoben?").
+- [ ] 3.3 Streuung in der UI sichtbar (Fehlerbalken/Spanne, n-Anzeige) - KPI-Kacheln
   korrekt aggregieren (Median statt Summe über Wiederholungen).
 - [ ] 3.4 **Präsentationsmodus:** aufgeräumte, großflächige Ansicht der Kernzahlen
   (Overhead-Faktor, Kostenfaktor, Qualitäts-Delta) für Beamer.
 - [ ] 3.5 **Live-Robustheit:** Fehler/Timeouts sichtbar abfangen, Buttons sperren,
   SSE-Abbruch sauber behandeln, klare Status-Hinweise.
 - [ ] 3.6 **Export:** Markdown-Download (Report) per Button; PDF optional via
-  Druckansicht (`window.print()` + Print-CSS — ohne Abhängigkeit).
+  Druckansicht (`window.print()` + Print-CSS - ohne Abhängigkeit).
 - [ ] 3.7 Beide Modi prominent: gespeicherte Läufe laden **und** Live-Prompt
   eingeben, klar getrennt und erklärt.
 - [ ] 3.8 README + `docs/methodik.md` final, Screenshots optional. Commit + Push.
@@ -134,7 +135,7 @@ Realmessungen sind aber jederzeit reproduzierbar abrufbar.
 ## Test Strategy
 - **Ausführen:** `python3 -m unittest discover -s tests` (schnell, kostenlos,
   Standard). Reale Messung: `RUN_LIVE=1 python3 -m unittest tests.test_live_measurement`.
-- **Unit (Mocks):** reine Logik ohne Netz/Subprozess — Pricing, Judge-Parsing &
+- **Unit (Mocks):** reine Logik ohne Netz/Subprozess - Pricing, Judge-Parsing &
   -Mapping, Report-Aggregation, Stats, Filter, Runner-Parsing (Fixtures).
 - **Integration/real:** belastbare Token-Messung, opt-in, prüft Plausibilität +
   Reproduzierbarkeit (relative Streuung unter Schwelle), nicht exakte Festwerte
