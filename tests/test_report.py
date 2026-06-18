@@ -98,6 +98,26 @@ class TestOverheadRows(unittest.TestCase):
         # output (999) zaehlt NICHT zum Overhead
         self.assertEqual(pi_ov, 500 + 100 + 400)
 
+    def test_overhead_stats_mit_streuung(self):
+        results = [
+            make_result("pi", "Haiku 4.5", inp=3000),
+            make_result("pi", "Haiku 4.5", inp=3100),
+            make_result("claude-code", "Haiku 4.5", inp=10, cr=21000, cw=8000),
+            make_result("claude-code", "Haiku 4.5", inp=10, cr=21000, cw=8200),
+        ]
+        rows = report._overhead_stats(results)
+        self.assertEqual(len(rows), 1)
+        model, pi_s, cc_s = rows[0]
+        self.assertEqual(pi_s["n"], 2)
+        self.assertEqual(pi_s["median"], 3050)
+        self.assertEqual(pi_s["min"], 3000)
+        self.assertEqual(pi_s["max"], 3100)
+        self.assertGreater(cc_s["median"], pi_s["median"] * 6)
+
+    def test_cell_stat_format(self):
+        s = {"median": 3050, "min": 3000, "max": 3100, "n": 2}
+        self.assertEqual(report._cell_stat(s), "3,050 (3,000–3,100, n=2)")
+
     def test_fallback_ohne_baseline(self):
         # keine baseline-Task vorhanden -> nutzt alle Ergebnisse statt leer
         results = [

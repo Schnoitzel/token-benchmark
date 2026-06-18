@@ -21,6 +21,7 @@ import statistics
 import sys
 from collections import defaultdict
 
+import stats
 # Gemeinsame Helfer (frueher hier dupliziert) kommen jetzt aus utils.
 from utils import fmt_cost, fmt_n, ratio, overhead_tokens, load_suite as _load_suite, latest_suite_path
 
@@ -167,6 +168,26 @@ def _overhead_rows(results: list[dict]):
     return out
 
 
+def _overhead_stats(results: list[dict]):
+    """Wie _overhead_rows, aber mit voller Streuung je Harness:
+    Liefert (modell, pi_summary, cc_summary) mit stats.summary() (Median, min,
+    max, stdev, rel_spread, n) ueber die Overhead-Tokens."""
+    by_model: dict[str, dict[str, list[float]]] = defaultdict(
+        lambda: {"pi": [], "claude-code": []}
+    )
+    for r in results:
+        by_model[r["model_label"]][r["harness"]].append(overhead_tokens(r["usage"]))
+    out = []
+    for model_label, hh in by_model.items():
+        out.append((model_label, stats.summary(hh["pi"]), stats.summary(hh["claude-code"])))
+    return out
+
+
+def _cell_stat(s: dict) -> str:
+    """Formatiert ein stats.summary() als 'Median (min–max, n=N)'."""
+    return f"{fmt_n(s['median'])} ({fmt_n(s['min'])}–{fmt_n(s['max'])}, n={s['n']})"
+
+
 # --- Markdown-Bericht -------------------------------------------------------
 
 def build_markdown(suite: dict) -> str:
@@ -205,10 +226,22 @@ def build_markdown(suite: dict) -> str:
             "Aufgabe und Antwortlaenge. Das ist die belastbarste Overhead-Kennzahl."
         )
         L.append("")
-        L.append("| Modell | Pi Overhead-Tokens | Claude Code Overhead-Tokens | Faktor |")
-        L.append("|--------|-------------------:|----------------------------:|-------:|")
-        for model_label, pi_ov, cc_ov in _overhead_rows(baseline):
-            L.append(f"| {model_label} | {round(pi_ov):,} | {round(cc_ov):,} | **{ratio(cc_ov, pi_ov)}** |")
+        L.append("| Modell | Pi Overhead (Median, min–max, n) | Claude Code Overhead (Median, min–max, n) | Faktor |")
+        L.append("|--------|-------------------------------:|----------------------------------------:|-------:|")
+        max_rel = 0.0
+        for model_label, pi_s, cc_s in _overhead_stats(baseline):
+            max_rel = max(max_rel, pi_s["rel_spread"], cc_s["rel_spread"])
+            L.append(
+                f"| {model_label} | {_cell_stat(pi_s)} | {_cell_stat(cc_s)} | "
+                f"**{ratio(cc_s['median'], pi_s['median'])}** |"
+            )
+        L.append("")
+        L.append(
+            f"_Belastbarkeit: groesste relative Streuung in diesem Block "
+            f"**{max_rel * 100:.1f}%** (Spanne/Median). Faustregel: < 5 % = sehr "
+            f"stabil, die Kernzahl ist dann hoch belastbar. Mehr Wiederholungen "
+            f"(`--repeat`) verkleinern die Streuung._"
+        )
         L.append("")
 
     # --- System-Prompt-Overhead pro Modell ---------------------------------
