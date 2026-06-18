@@ -133,18 +133,17 @@ Beamer/Slide-Ansicht wechselt. **Theme umschaltbar** (dunkel/hell). Drill-down
 wie im Mockup (aufklappbar pro Kennzahl). Money-Zahlen: Token-Overhead-Faktor,
 Kosten-Faktor, Qualitäts-Delta.
 
-- [ ] 3.0 **Backend:** `/api/config` liefert `pricing` (PRICES + Cache-Faktoren),
-  damit die UI Gewichtung/Preise aus EINER Quelle zieht (architect-High-Befund).
-  Test-first (server-Logik testbar).
-- [ ] 3.1 **Methodik-/Provenienz-Panel** in der UI: Versionen, Flags, Sandbox,
-  Preise, Cache-Faktoren, n - immer einsehbar (aus `provenance`).
-- [ ] 3.2 **Drill-down je Kennzahl:** von jeder KPI/Balken/Tabelle zu den
-  Roh-Tokens und der Rechenformel (Tooltip/Aufklapp "Wie wurde das erhoben?").
-- [ ] 3.3 Streuung in der UI sichtbar (Fehlerbalken/Spanne, n-Anzeige) - KPI-Kacheln
-  korrekt aggregieren (Median statt Summe über Wiederholungen).
-- [ ] 3.4 **Präsentationsmodus:** "Präsentieren"-Knopf wechselt in großflächige
-  Slide-Ansicht der 3 Kernzahlen (Overhead-Faktor, Kostenfaktor, Qualitäts-Delta)
-  für Beamer. **Theme-Umschalter (dunkel/hell)** global.
+- [x] 3.0 **Backend:** `/api/config` liefert `pricing` (PRICES + Cache-Faktoren).
+  `server.build_config()`, 3 Tests (test-first). UI ohne hartkodierte Preise.
+- [x] 3.1 **Provenienz-Panel** in der UI (aus `provenance`): Versionen, Flags,
+  Sandbox, Preise, Cache-Faktoren, Plattform. (UI v1)
+- [x] 3.2 **Drill-down je Kennzahl:** aufklappbar "Wie wurde das erhoben?" mit
+  Roh-Tokens + Formel + n + Provenienz. (UI v1)
+- [x] 3.3 Streuung in der UI: KPIs nutzen Median aus `suite.aggregates`
+  (Fallback fuer alte Dateien), Spanne+n angezeigt. (UI v1)
+- [x] 3.4 **Praesentationsmodus:** "Praesentieren"-Slide (3 Kernzahlen) +
+  Theme-Umschalter (dunkel/hell, localStorage). (UI v1, via worker-Subagent)
+  Offen fuer v2: mehrere Slides durchklickbar.
 - [ ] 3.5 **Live-Robustheit:** Fehler/Timeouts sichtbar abfangen, Buttons sperren,
   SSE-Abbruch sauber behandeln, klare Status-Hinweise.
 - [ ] 3.6 **Export:** Markdown-Download (Report) per Button; PDF optional via
