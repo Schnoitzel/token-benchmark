@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Token-Benchmark · Pi vs Claude Code</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #1a1d27;
+    --panel-2: #222633;
+    --border: #2c3142;
+    --text: #e6e8ee;
+    --muted: #9aa0b0;
+    --pi: #38bdf8;        /* hellblau */
+    --cc: #c084fc;        /* lila */
+    --good: #4ade80;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --accent: #6366f1;
+    --shadow: 0 4px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  header {
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #161922, #0f1117);
+  }
+  header h1 { margin: 0; font-size: 24px; letter-spacing: -.3px; }
+  header p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 32px 64px; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 22px;
+    box-shadow: var(--shadow);
+  }
+  .card h2 { margin: 0 0 16px; font-size: 16px; font-weight: 600; }
+  .card h2 .sub { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+
+  .group { margin-bottom: 18px; }
+  .group > label.title { display:block; font-size: 13px; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: 999px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    cursor: pointer; user-select: none; font-size: 14px; transition: all .12s;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip input { display: none; }
+  .chip .badge { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: rgba(255,255,255,.12); }
+  .chip.pi.on { background: var(--pi); border-color: var(--pi); color:#04222e; }
+  .chip.cc.on { background: var(--cc); border-color: var(--cc); color:#240a36; }
+
+  .task-row {
+    display:flex; align-items:center; gap:12px;
+    padding:10px 12px; border-radius:10px; cursor:pointer;
+    border:1px solid transparent;
+  }
+  .task-row:hover { background: var(--panel-2); }
+  .task-row.on { background: var(--panel-2); border-color: var(--border); }
+  .task-row input { width:18px; height:18px; accent-color: var(--accent); }
+  .task-row .meta { flex:1; }
+  .task-row .tid { font-weight:600; font-size:14px; }
+  .task-row .desc { font-size:12.5px; color:var(--muted); }
+  .cx { font-size:11px; padding:2px 9px; border-radius:999px; font-weight:600; }
+  .cx.trivial { background:#14361f; color:#6ee7a8; }
+  .cx.simple  { background:#173049; color:#7cc4f8; }
+  .cx.medium  { background:#3a2f12; color:#fbd56b; }
+  .cx.complex { background:#3d1b1b; color:#fca5a5; }
+  .tool-tag { font-size:11px; color:var(--warn); border:1px solid #4a3c14; padding:1px 7px; border-radius:999px; }
+
+  .controls { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .btn {
+    background: var(--accent); color:#fff; border:none; border-radius:10px;
+    padding:12px 22px; font-size:15px; font-weight:600; cursor:pointer; transition:.12s;
+  }
+  .btn:hover { filter:brightness(1.1); }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .btn.ghost { background:var(--panel-2); border:1px solid var(--border); }
+  .est { color:var(--muted); font-size:14px; }
+  .est b { color: var(--text); }
+  select, input[type=number] {
+    background:var(--panel-2); color:var(--text); border:1px solid var(--border);
+    border-radius:8px; padding:8px 10px; font-size:14px;
+  }
+
+  /* Progress */
+  #progressCard { display:none; }
+  .pbar-outer { height:10px; background:var(--panel-2); border-radius:999px; overflow:hidden; margin:6px 0 14px; }
+  .pbar-inner { height:100%; width:0%; background:linear-gradient(90deg,var(--pi),var(--accent),var(--cc)); transition:width .3s; }
+  .log { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size:12.5px; max-height:240px; overflow:auto; background:#0b0d13; border:1px solid var(--border); border-radius:10px; padding:12px; }
+  .log .line { padding:2px 0; white-space:pre-wrap; }
+  .log .ok { color:var(--good); }
+  .log .err { color:var(--bad); }
+  .log .dim { color:var(--muted); }
+  .log .pi { color:var(--pi); }
+  .log .cc { color:var(--cc); }
+
+  /* Results */
+  #resultsCard { display:none; }
+  /* Vergleichstabelle (ersetzt KPI-Kacheln) */
+  .cmp-wrap { overflow-x:auto; margin-bottom:22px; }
+  .cmp { width:100%; border-collapse:collapse; font-size:14px; }
+  .cmp th { padding:8px 14px; text-align:right; color:var(--muted); font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:.4px; border-bottom:2px solid var(--border); }
+  .cmp th:first-child { text-align:left; }
+  .cmp td { padding:12px 14px; text-align:right; border-bottom:1px solid var(--border); vertical-align:top; }
+  .cmp td:first-child { text-align:left; }
+  .cmp .val { font-size:20px; font-weight:700; display:block; }
+  .cmp .delta { display:inline-block; margin-top:4px; font-size:11.5px; font-weight:600; padding:2px 7px; border-radius:999px; }
+  .cmp .delta.good { background:#0f2e1a; color:#4ade80; }
+  .cmp .delta.bad  { background:#2e1212; color:#f87171; }
+  .cmp .delta.warn { background:#2e2212; color:#fbbf24; }
+  .cmp .harness-label { display:inline-flex; align-items:center; gap:8px; font-size:15px; font-weight:700; padding:4px 0; }
+  .cmp .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  .cmp .dot.pi { background:var(--pi); }
+  .cmp .dot.cc { background:var(--cc); }
+  .price-note { font-size:12px; color:var(--muted); background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin-top:10px; line-height:1.7; }
+  .price-note b { color:var(--text); }
+  .price-note .warn { color:var(--warn); }
+
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th, td { padding:9px 10px; text-align:right; border-bottom:1px solid var(--border); }
+  th:first-child, td:first-child { text-align:left; }
+  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.4px; }
+  tr td .pill { font-size:11px; padding:1px 8px; border-radius:999px; }
+  .pill.pi { background:rgba(56,189,248,.15); color:var(--pi); }
+  .pill.cc { background:rgba(192,132,252,.15); color:var(--cc); }
+
+  /* Bars */
+  .barchart { display:flex; flex-direction:column; gap:14px; }
+  .bar-group .bar-label { font-size:13px; margin-bottom:6px; color:var(--muted); }
+  .bar-track { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+  .bar-track .name { width:90px; font-size:13px; }
+  .bar-outer { flex:1; height:24px; background:var(--panel-2); border-radius:6px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; font-size:12px; font-weight:600; color:#06121a; min-width:34px; }
+  .bar-fill.pi { background:var(--pi); }
+  .bar-fill.cc { background:var(--cc); color:#1a0a28; }
+
+  details { background:var(--panel-2); border:1px solid var(--border); border-radius:10px; margin-bottom:10px; }
+  details summary { cursor:pointer; padding:12px 14px; font-weight:600; font-size:14px; }
+  details .resp-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:0 14px 14px; }
+  .prompt-box { margin:0 14px 14px; background:#0b0d13; border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:8px; padding:10px 14px; }
+  .prompt-box .plabel { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-bottom:6px; }
+  .prompt-box pre { white-space:pre-wrap; word-break:break-word; margin:0; font-size:12.5px; font-family:ui-monospace,Menlo,monospace; max-height:200px; overflow:auto; color:var(--text); }
+  .resp-box { background:#0b0d13; border:1px solid var(--border); border-radius:8px; padding:12px; }
+  .resp-box h4 { margin:0 0 6px; font-size:13px; }
+  .resp-box .stat { font-size:12px; color:var(--muted); margin-bottom:8px; }
+  .resp-box pre { white-space:pre-wrap; word-break:break-word; margin:0; font-size:12.5px; font-family:ui-monospace,Menlo,monospace; max-height:340px; overflow:auto; }
+  @media (max-width:720px){ details .resp-grid{ grid-template-columns:1fr; } }
+
+  .hint { font-size:12.5px; color:var(--muted); margin-top:10px; }
+  .section-title { font-size:14px; font-weight:600; margin:26px 0 12px; color:var(--text); }
+  .toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🪙 Token-Benchmark</h1>
+  <p>Vergleich des Token-Verbrauchs: <b style="color:var(--pi)">Pi</b> vs <b style="color:var(--cc)">Claude Code</b> — gleiche Prompts, gleiche Modelle.</p>
+</header>
+
+<div class="wrap">
+
+  <!-- Konfiguration -->
+  <div class="card">
+    <h2>1 · Konfiguration <span class="sub">Was soll getestet werden?</span></h2>
+
+    <div class="group">
+      <label class="title">Harnesses</label>
+      <div class="chips" id="harnesses">
+        <label class="chip pi on"><input type="checkbox" value="pi" checked> Pi</label>
+        <label class="chip cc on"><input type="checkbox" value="claude-code" checked> Claude Code</label>
+      </div>
+    </div>
+
+    <div class="group">
+      <label class="title">Modelle</label>
+      <div class="chips" id="models"></div>
+    </div>
+
+    <div class="group">
+      <label class="title">Aufgaben</label>
+      <div class="toolbar">
+        <button class="btn ghost" type="button" onclick="selectTasks('all')">Alle</button>
+        <button class="btn ghost" type="button" onclick="selectTasks('none')">Keine</button>
+        <button class="btn ghost" type="button" onclick="selectTasks('trivial')">Nur trivial</button>
+        <button class="btn ghost" type="button" onclick="selectTasks('trivial,simple')">trivial + simple</button>
+      </div>
+      <div id="tasks"></div>
+    </div>
+
+    <div class="group">
+      <label class="title">Eigener Prompt (optional)</label>
+      <textarea id="customPrompt" rows="3" placeholder="Eigenen Prompt hier eingeben … überschreibt die Aufgaben-Auswahl oben und testet stattdessen genau diesen Text."
+        style="width:100%; background:var(--panel-2); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:14px; font-family:inherit; resize:vertical;"
+        oninput="onCustomPromptInput()"></textarea>
+      <label class="task-row" style="margin-top:8px; display:inline-flex;">
+        <input type="checkbox" id="customUseTools">
+        <div class="meta"><div class="desc">Tools erlauben (Shell/Dateien) – sonst nur Wissensantwort</div></div>
+      </label>
+      <div class="hint" id="customHint" style="display:none; color:var(--warn);">⚠ Eigener Prompt aktiv – die Aufgaben-Auswahl oben wird ignoriert.</div>
+    </div>
+
+    <div class="group">
+      <label class="title">Pause zwischen Läufen (Sek.)</label>
+      <input type="number" id="delay" value="2" min="0" max="30" step="0.5" style="width:90px">
+    </div>
+
+    <div class="group">
+      <label class="title">Wiederholungen je Kombination</label>
+      <input type="number" id="repeat" value="1" min="1" max="20" step="1" style="width:90px" oninput="updateEstimate()">
+      <div class="hint">Mehr Wiederholungen = belastbarere Zahlen (Median/Streuung). Für die Show 3–5 empfohlen.</div>
+    </div>
+
+    <div class="controls">
+      <button class="btn" id="startBtn" onclick="startRun()">▶ Benchmark starten</button>
+      <span class="est">Geplant: <b id="estRuns">0</b> Läufe</span>
+    </div>
+    <div class="hint">Tipp: Zum Ausprobieren erst „Nur trivial“ + ein Modell wählen — das ist schnell und günstig.</div>
+  </div>
+
+  <!-- Fortschritt -->
+  <div class="card" id="progressCard">
+    <h2>2 · Fortschritt <span class="sub" id="progressSub"></span></h2>
+    <div class="pbar-outer"><div class="pbar-inner" id="pbar"></div></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <!-- Ergebnisse -->
+  <div class="card" id="resultsCard">
+    <h2>3 · Ergebnisse <span class="sub" id="resultsSub"></span></h2>
+    <div class="kpis" id="kpis"></div>
+
+    <div class="section-title" style="margin-top:28px">Qualität (blinder LLM-Richter)</div>
+    <div id="qualityControls">
+      <button class="btn" id="judgeBtn" onclick="judgeRun()">⚖ Qualität bewerten (Opus, blind)</button>
+      <span class="est" id="judgeStatus"></span>
+    </div>
+    <div id="qualityBox" style="margin-top:14px"></div>
+
+    <div class="section-title" style="margin-top:28px">System-Prompt-Overhead (Cache-Tokens pro Anfrage)</div>
+    <div class="barchart" id="overheadChart"></div>
+
+    <div class="section-title">Details pro Aufgabe & Modell</div>
+    <div style="overflow-x:auto"><table id="detailTable"></table></div>
+
+    <div class="section-title">Antworten (zum Vergleich der Qualität)</div>
+    <div id="responses"></div>
+  </div>
+
+  <!-- Frühere Läufe -->
+  <div class="card">
+    <h2>📂 Frühere Läufe ansehen</h2>
+    <div class="controls">
+      <select id="pastRuns"><option value="">— auswählen —</option></select>
+      <button class="btn ghost" onclick="loadPast()">Laden</button>
+      <button class="btn ghost" onclick="refreshPast()">Aktualisieren</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let CONFIG = { models: [], tasks: [] };
+
+// --- Init ------------------------------------------------------------------
+async function init() {
+  const r = await fetch('/api/config');
+  CONFIG = await r.json();
+  renderModels();
+  renderTasks();
+  refreshPast();
+  updateEstimate();
+}
+
+function renderModels() {
+  const el = document.getElementById('models');
+  el.innerHTML = '';
+  CONFIG.models.forEach((m, i) => {
+    const lab = document.createElement('label');
+    lab.className = 'chip' + (i < 1 ? ' on' : '');  // standardmäßig nur 1. Modell an
+    lab.innerHTML = `<input type="checkbox" value="${m.label}" ${i<1?'checked':''}> ${m.label} <span class="badge">${m.tier}</span>`;
+    el.appendChild(lab);
+  });
+  bindChips(el);
+}
+
+// Hält die optische 'on'-Markierung mit dem Checkbox-Status synchron.
+// Wir hören NUR auf 'change' – das Label schaltet die Checkbox nativ um,
+// also dürfen wir sie nicht zusätzlich per Code umschalten (sonst Doppel-Toggle).
+function bindChips(container) {
+  container.querySelectorAll('.chip').forEach(chip => {
+    const input = chip.querySelector('input');
+    input.addEventListener('change', () => {
+      chip.classList.toggle('on', input.checked);
+      updateEstimate();
+    });
+  });
+}
+
+function renderTasks() {
+  const el = document.getElementById('tasks');
+  el.innerHTML = '';
+  CONFIG.tasks.forEach((t, i) => {
+    const row = document.createElement('label');
+    row.className = 'task-row' + (t.complexity === 'trivial' ? ' on' : '');
+    row.dataset.complexity = t.complexity;
+    row.innerHTML = `
+      <input type="checkbox" value="${t.id}" ${t.complexity==='trivial'?'checked':''}>
+      <div class="meta"><div class="tid">${t.id}</div><div class="desc">${t.description}</div></div>
+      ${t.use_tools ? '<span class="tool-tag">Tools</span>' : ''}
+      <span class="cx ${t.complexity}">${t.complexity}</span>`;
+    row.querySelector('input').addEventListener('change', () => {
+      row.classList.toggle('on', row.querySelector('input').checked);
+      updateEstimate();
+    });
+    el.appendChild(row);
+  });
+}
+
+function getChecked(id) {
+  return [...document.querySelectorAll(`#${id} input:checked`)].map(i => i.value);
+}
+
+function selectTasks(mode) {
+  document.querySelectorAll('#tasks .task-row').forEach(row => {
+    const inp = row.querySelector('input');
+    let on = false;
+    if (mode === 'all') on = true;
+    else if (mode === 'none') on = false;
+    else on = mode.split(',').includes(row.dataset.complexity);
+    inp.checked = on;
+    row.classList.toggle('on', on);
+  });
+  updateEstimate();
+}
+
+function updateEstimate() {
+  const h = getChecked('harnesses').length;
+  const m = getChecked('models').length;
+  const hasCustom = document.getElementById('customPrompt').value.trim().length > 0;
+  const t = hasCustom ? 1 : getChecked('tasks').length;
+  const rep = Math.max(1, parseInt(document.getElementById('repeat').value || '1', 10));
+  document.getElementById('estRuns').textContent = h * m * t * rep;
+}
+
+// Eigener Prompt: blendet Hinweis ein und aktualisiert die Lauf-Schätzung.
+function onCustomPromptInput() {
+  const hasCustom = document.getElementById('customPrompt').value.trim().length > 0;
+  document.getElementById('customHint').style.display = hasCustom ? 'block' : 'none';
+  updateEstimate();
+}
+
+// Harness-Chips genauso anbinden (waren vorher nur statisch im HTML)
+bindChips(document.getElementById('harnesses'));
+
+// --- Lauf starten ----------------------------------------------------------
+let allResults = [];
+
+function startRun() {
+  const harnesses = getChecked('harnesses');
+  const models = getChecked('models');
+  const tasks = getChecked('tasks');
+  const customPrompt = document.getElementById('customPrompt').value.trim();
+  const customUseTools = document.getElementById('customUseTools').checked;
+
+  if (!harnesses.length || !models.length) {
+    alert('Bitte mindestens je 1 Harness und Modell wählen.');
+    return;
+  }
+  if (!customPrompt && !tasks.length) {
+    alert('Bitte mindestens 1 Aufgabe wählen – oder einen eigenen Prompt eingeben.');
+    return;
+  }
+  const delay = document.getElementById('delay').value || '2';
+  const repeat = Math.max(1, parseInt(document.getElementById('repeat').value || '1', 10));
+
+  const params = new URLSearchParams({
+    harnesses: harnesses.join(','),
+    models: models.join(','),
+    delay,
+    repeat: String(repeat)
+  });
+  if (customPrompt) {
+    params.set('custom_prompt', customPrompt);
+    params.set('custom_use_tools', customUseTools ? '1' : '0');
+  } else {
+    params.set('tasks', tasks.join(','));
+  }
+
+  // UI vorbereiten
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('progressCard').style.display = 'block';
+  document.getElementById('resultsCard').style.display = 'none';
+  const log = document.getElementById('log');
+  log.innerHTML = '';
+  document.getElementById('pbar').style.width = '0%';
+  allResults = [];
+
+  const es = new EventSource('/api/run?' + params.toString());
+
+  es.onmessage = ev => {
+    const d = JSON.parse(ev.data);
+    handleEvent(d, log);
+    if (d.type === 'done') {
+      es.close();
+      document.getElementById('startBtn').disabled = false;
+      refreshPast();
+    }
+  };
+  es.onerror = () => {
+    es.close();
+    document.getElementById('startBtn').disabled = false;
+    addLog(log, 'Verbindung beendet.', 'dim');
+  };
+}
+
+function addLog(log, html, cls='') {
+  const div = document.createElement('div');
+  div.className = 'line ' + cls;
+  div.innerHTML = html;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function fmtCost(u) {
+  if (u < 0.001) return (u*1000).toFixed(3) + 'm$';
+  return '$' + u.toFixed(5);
+}
+function fmtN(n) { return Math.round(n).toLocaleString('de-DE'); }
+
+function handleEvent(d, log) {
+  if (d.type === 'start') {
+    document.getElementById('progressSub').textContent =
+      `${d.total} Läufe · ${d.harnesses.join(', ')} · ${d.models.join(', ')}`;
+    addLog(log, `Start: ${d.total} Läufe geplant`, 'dim');
+  }
+  else if (d.type === 'run_start') {
+    addLog(log, `<span class="dim">[${d.index}/${d.total}]</span> ${d.harness} / ${d.model} · ${d.task} …`);
+  }
+  else if (d.type === 'result') {
+    const r = d.result, u = r.usage;
+    allResults.push(r);
+    const hcls = r.harness === 'pi' ? 'pi' : 'cc';
+    if (r.error) {
+      addLog(log, `   <span class="err">✗ FEHLER</span> ${r.error.substring(0,120)}`, '');
+    } else {
+      addLog(log, `   <span class="ok">✓</span> <span class="${hcls}">${r.harness}</span> ` +
+        `total=<b>${fmtN(u.total_tokens)}</b> (cache=${fmtN(u.cache_read+u.cache_write)} out=${u.output_tokens}) ` +
+        `<span class="dim">${fmtCost(u.cost_usd)} · ${(r.duration_ms/1000).toFixed(1)}s</span>`);
+    }
+    const pct = Math.round(d.index / d.total * 100);
+    document.getElementById('pbar').style.width = pct + '%';
+  }
+  else if (d.type === 'done') {
+    addLog(log, `Fertig. Gespeichert als ${d.out_file}`, 'ok');
+    renderResults(d.suite);
+  }
+}
+
+// --- Ergebnisse darstellen -------------------------------------------------
+let currentSuite = null;
+
+// --- Qualitätsbewertung (blinder Richter) ----------------------------------
+function judgeRun() {
+  if (!currentSuite) return;
+  const btn = document.getElementById('judgeBtn');
+  const status = document.getElementById('judgeStatus');
+  btn.disabled = true;
+  status.textContent = 'Starte Bewertung …';
+  const es = new EventSource('/api/judge?run_id=' + encodeURIComponent(currentSuite.run_id));
+  es.onmessage = ev => {
+    const d = JSON.parse(ev.data);
+    if (d.type === 'judge_start') {
+      status.textContent = `Bewerte ${d.total} Paar(e) … (je 2 Durchläufe, Swap-Test)`;
+    } else if (d.type === 'judge_progress') {
+      const v = d.verdict || {};
+      const win = v.error ? '⚠ Fehler' : ('Sieger: ' + v.winner);
+      status.textContent = `[${d.index}/${d.total}] ${d.task_id} / ${d.model_label} – ${win}`;
+    } else if (d.type === 'judge_done') {
+      es.close();
+      btn.disabled = false;
+      status.textContent = 'Fertig.';
+      if (currentSuite) currentSuite.quality = d.quality;
+      renderQuality(d.quality);
+    }
+  };
+  es.onerror = () => { es.close(); btn.disabled = false; status.textContent = 'Verbindung beendet.'; };
+}
+
+function renderQuality(quality) {
+  const box = document.getElementById('qualityBox');
+  if (!quality || !quality.summary) { box.innerHTML = ''; return; }
+  const s = quality.summary;
+  const delta = s.score_delta;
+  let verdict, cls;
+  if (Math.abs(delta) < 0.25) { verdict = `Kein bedeutsamer Qualitätsunterschied (Δ ${delta>=0?'+':''}${delta.toFixed(2)} Punkte)`; cls = 'good'; }
+  else if (delta > 0) { verdict = `Claude Code im Schnitt +${delta.toFixed(2)} Punkte besser`; cls = 'bad'; }
+  else { verdict = `Pi im Schnitt +${(-delta).toFixed(2)} Punkte besser`; cls = 'good'; }
+
+  const order = ['baseline','trivial','simple','medium','complex'];
+  const rows = (quality.judgements || []).filter(j => !j.error).sort((a,b) =>
+    order.indexOf(a.task_complexity)-order.indexOf(b.task_complexity)
+    || a.task_id.localeCompare(b.task_id) || a.model_label.localeCompare(b.model_label));
+
+  let html = `<div class="price-note">Richter: <b>${quality.judge_default}</b> ` +
+    `(Ausweich-Richter für Opus-Antworten: ${quality.judge_fallback}). Methode: ${quality.method}.</div>`;
+  html += `<div class="cmp-wrap"><table class="cmp"><thead><tr>` +
+    `<th></th><th>Ø Score (1–5)</th><th>Siege</th><th>Unentschieden</th><th>Positions-Bias</th><th>Paare</th>` +
+    `</tr></thead><tbody>` +
+    `<tr><td><span class="harness-label"><span class="dot pi"></span> Pi</span></td>` +
+    `<td><b>${s.pi_mean_score.toFixed(2)}</b></td><td>${s.wins.pi}</td><td rowspan="2">${s.wins.tie}</td>` +
+    `<td rowspan="2">${s.position_bias_count}</td><td rowspan="2">${s.n_pairs}</td></tr>` +
+    `<tr><td><span class="harness-label"><span class="dot cc"></span> Claude Code</span></td>` +
+    `<td><b>${s.cc_mean_score.toFixed(2)}</b></td><td>${s.wins.cc}</td></tr>` +
+    `</tbody></table></div>`;
+  html += `<div class="price-note"><b class="delta ${cls}">Fazit:</b> ${verdict}.</div>`;
+
+  if (rows.length) {
+    html += `<div style="overflow-x:auto"><table id="qualityTable"><thead><tr>` +
+      `<th>Aufgabe</th><th>Modell</th><th>Sieger</th><th>Pi-Score</th><th>CC-Score</th><th>Bias</th><th>Begründung</th>` +
+      `</tr></thead><tbody>`;
+    rows.forEach(j => {
+      const wcls = j.winner==='pi'?'pi':(j.winner==='cc'?'cc':'');
+      const winLabel = j.winner==='tie' ? 'unentsch.' : j.winner;
+      html += `<tr><td>${j.task_id}</td><td>${j.model_label}</td>` +
+        `<td><span class="pill ${wcls}">${winLabel}</span></td>` +
+        `<td>${j.pi_overall.toFixed(2)}</td><td>${j.cc_overall.toFixed(2)}</td>` +
+        `<td>${j.position_bias?'⚠':'–'}</td><td>${(j.justification||'').replace(/</g,'&lt;')}</td></tr>`;
+    });
+    html += `</tbody></table></div>`;
+  }
+  box.innerHTML = html;
+}
+
+function renderResults(suite) {
+  currentSuite = suite;
+  const res = suite.results;
+  document.getElementById('resultsCard').style.display = 'block';
+  document.getElementById('resultsSub').textContent = `Run ${suite.run_id} · ${res.length} Läufe`;
+  renderQuality(suite.quality || null);
+  document.getElementById('judgeStatus').textContent = '';
+  document.getElementById('judgeBtn').disabled = false;
+
+  const pi = res.filter(r => r.harness === 'pi' && !r.error);
+  const cc = res.filter(r => r.harness === 'claude-code' && !r.error);
+  const sum = (arr, f) => arr.reduce((a, r) => a + f(r), 0);
+  const avg = (arr, f) => arr.length ? sum(arr, f)/arr.length : 0;
+
+  // KPIs
+  const piTok = sum(pi, r => r.usage.total_tokens);
+  const ccTok = sum(cc, r => r.usage.total_tokens);
+  const piCost = sum(pi, r => r.usage.cost_usd);
+  const ccCost = sum(cc, r => r.usage.cost_usd);
+  const tokFactor = piTok ? (ccTok/piTok) : 0;
+  const costFactor = piCost ? (ccCost/piCost) : 0;
+
+  const piInputTok  = sum(pi, r => r.usage.input_tokens);
+  const ccInputTok  = sum(cc, r => r.usage.input_tokens);
+  const piCacheTok  = sum(pi, r => r.usage.cache_read + r.usage.cache_write);
+  const ccCacheTok  = sum(cc, r => r.usage.cache_read + r.usage.cache_write);
+  const piOutTok    = sum(pi, r => r.usage.output_tokens);
+  const ccOutTok    = sum(cc, r => r.usage.output_tokens);
+  const piDurAvg    = avg(pi, r => r.duration_ms);
+  const ccDurAvg    = avg(cc, r => r.duration_ms);
+
+  // Preis-Faktoren relativ zu Input-Tokens (bei allen Anthropic-Modellen identisch):
+  //   Input ×1 · Cache-Read ×0,1 · Cache-Write ×1,25 · Output ×5
+  // "Gewichtete Tokens" = Rohtokens umgerechnet in Input-Token-Äquivalente.
+  // Dieser Wert ist proportional zu den echten Kosten – der faire Token-Vergleich.
+  const W = { input: 1, cacheRead: 0.1, cacheWrite: 1.25, output: 5 };
+  const weighted = r => r.usage.input_tokens * W.input
+                      + r.usage.cache_read   * W.cacheRead
+                      + r.usage.cache_write  * W.cacheWrite
+                      + r.usage.output_tokens* W.output;
+  const piWtTok = sum(pi, weighted);
+  const ccWtTok = sum(cc, weighted);
+
+  // Rendert Wert + farbiges Delta-Badge. lowerIsBetter=true: kleinerer Wert ist grün.
+  // rawTokens=true: Badge mit "(roh)" markieren – rohe Tokens sind kein fairer Kostenvergleich.
+  function cell(val, other, fmt, lowerIsBetter = true, rawTokens = false) {
+    const fmtVal = fmt(val);
+    if (!other || !val) return `<span class="val">${fmtVal}</span>`;
+    const factor = val / other;
+    let badge = '';
+    const better = lowerIsBetter ? factor < 1 : factor > 1;
+    const worse  = lowerIsBetter ? factor > 1 : factor < 1;
+    const rawNote = rawTokens ? ' <span style="font-weight:400;opacity:.7">(roh)</span>' : '';
+    if (better) {
+      const f = (1/factor).toFixed(1);
+      badge = `<span class="delta ${rawTokens ? 'warn' : 'good'}">↓ ${f}×${rawNote}</span>`;
+    } else if (worse) {
+      const f = factor.toFixed(1);
+      badge = `<span class="delta ${rawTokens ? 'warn' : 'bad'}">↑ ${f}×${rawNote}</span>`;
+    }
+    return `<span class="val">${fmtVal}</span>${badge}`;
+  }
+  function cellCost(val, other) {
+    const fmtVal = fmtCost(val);
+    if (!other || !val) return `<span class="val">${fmtVal}</span>`;
+    const factor = val / other;
+    let badge = '';
+    if (factor < 0.999) badge = `<span class="delta good">✓ ${(1/factor).toFixed(1)}× günstiger</span>`;
+    else if (factor > 1.001) badge = `<span class="delta bad">✗ ${factor.toFixed(1)}× teurer</span>`;
+    return `<span class="val">${fmtVal}</span>${badge}`;
+  }
+  function cellDur(val, other) {
+    const fmtVal = (val/1000).toFixed(1)+'s';
+    if (!other || !val) return `<span class="val">${fmtVal}</span>`;
+    const factor = val / other;
+    let badge = '';
+    if (factor < 0.95) badge = `<span class="delta good">✓ ${(1/factor).toFixed(1)}× schneller</span>`;
+    else if (factor > 1.05) badge = `<span class="delta bad">✗ ${factor.toFixed(1)}× langsamer</span>`;
+    return `<span class="val">${fmtVal}</span>${badge}`;
+  }
+
+  const kpis = document.getElementById('kpis');
+  kpis.innerHTML = `
+  <div class="cmp-wrap"><table class="cmp">
+    <thead><tr>
+      <th></th>
+      <th>Input-Tokens</th>
+      <th>Cache-Tokens</th>
+      <th>Output-Tokens</th>
+      <th>Total (roh)</th>
+      <th title="Rohtokens umgerechnet in Input-Token-Äquivalente via Preis-Faktoren">Gewichtet ☆</th>
+      <th>Kosten</th>
+      <th>Ø Dauer</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="harness-label"><span class="dot pi"></span> Pi</span></td>
+        <td>${cell(piInputTok,  ccInputTok,  fmtN, true, true)}</td>
+        <td>${cell(piCacheTok,  ccCacheTok,  fmtN, true, true)}</td>
+        <td>${cell(piOutTok,    ccOutTok,    fmtN, true, true)}</td>
+        <td>${cell(piTok,       ccTok,       fmtN, true, true)}</td>
+        <td>${cell(piWtTok,     ccWtTok,     fmtN)}</td>
+        <td>${cellCost(piCost,  ccCost)}</td>
+        <td>${cellDur(piDurAvg, ccDurAvg)}</td>
+      </tr>
+      <tr>
+        <td><span class="harness-label"><span class="dot cc"></span> Claude Code</span></td>
+        <td>${cell(ccInputTok,  piInputTok,  fmtN, true, true)}</td>
+        <td>${cell(ccCacheTok,  piCacheTok,  fmtN, true, true)}</td>
+        <td>${cell(ccOutTok,    piOutTok,    fmtN, true, true)}</td>
+        <td>${cell(ccTok,       piTok,       fmtN, true, true)}</td>
+        <td>${cell(ccWtTok,     piWtTok,     fmtN)}</td>
+        <td>${cellCost(ccCost,  piCost)}</td>
+        <td>${cellDur(ccDurAvg, piDurAvg)}
+      </tr>
+    </tbody>
+  </table></div>
+  <div class="price-note">
+    ⚠ <b>Token-Zähler sind roh und nicht kostengewichtet.</b> Verschiedene Token-Typen kosten unterschiedlich viel (Haiku 4.5):
+    <b>Input</b> $1,00/MTok · <b>Cache-Read</b> <span class="warn">$0,10/MTok (10× billiger!)</span> · <b>Cache-Write</b> $1,25/MTok · <b>Output</b> $5,00/MTok.<br>
+    Ein roher Vergleich der Token-Anzahl (z.B. "10,7× mehr") übertreibt daher den Unterschied – die <b>Kosten-Spalte</b> ist der faire Vergleich.
+    Die Token-Badges sind deshalb mit <b>(roh)</b> markiert.<br>
+    <b>☆ Gewichtet</b> = Rohtokens umgerechnet in Input-Token-Äquivalente (Input ×1 · Cache-Read ×0,1 · Cache-Write ×1,25 · Output ×5).
+    Dieser Wert ist proportional zu den echten Kosten – sein Faktor stimmt mit der Kosten-Spalte überein und zeigt den <b>realen</b> Mehrverbrauch.
+  </div>`;
+
+  // Overhead-Chart pro Modell
+  const models = [...new Set(res.map(r => r.model_label))];
+  const chart = document.getElementById('overheadChart');
+  chart.innerHTML = '';
+  let maxCache = 0;
+  const data = models.map(m => {
+    const p = res.filter(r => r.harness==='pi' && r.model_label===m && !r.error);
+    const c = res.filter(r => r.harness==='claude-code' && r.model_label===m && !r.error);
+    const pc = avg(p, r => r.usage.cache_read + r.usage.cache_write);
+    const cc2 = avg(c, r => r.usage.cache_read + r.usage.cache_write);
+    maxCache = Math.max(maxCache, pc, cc2);
+    return { m, pc, cc2 };
+  });
+  data.forEach(({m, pc, cc2}) => {
+    const g = document.createElement('div');
+    g.className = 'bar-group';
+    const wp = maxCache ? Math.max(pc/maxCache*100, 2) : 0;
+    const wc = maxCache ? Math.max(cc2/maxCache*100, 2) : 0;
+    const factor = pc ? (cc2/pc).toFixed(1)+'×' : '–';
+    g.innerHTML = `
+      <div class="bar-label">${m} — Overhead-Faktor <b style="color:var(--warn)">${factor}</b></div>
+      <div class="bar-track"><span class="name">Pi</span><div class="bar-outer"><div class="bar-fill pi" style="width:${wp}%">${fmtN(pc)}</div></div></div>
+      <div class="bar-track"><span class="name">Claude Code</span><div class="bar-outer"><div class="bar-fill cc" style="width:${wc}%">${fmtN(cc2)}</div></div></div>`;
+    chart.appendChild(g);
+  });
+
+  // Detail-Tabelle
+  const tbl = document.getElementById('detailTable');
+  tbl.innerHTML = `<thead><tr>
+    <th>Aufgabe</th><th>Modell</th><th>Harness</th>
+    <th>Input</th><th title="Cache-Read ($0,10/MTok)">Cache↓Read</th><th title="Cache-Write ($1,25/MTok)">Cache↑Write</th><th>Output</th><th>Total (roh)</th><th title="Input-Token-Äquivalente: Input ×1 · Cache-Read ×0,1 · Cache-Write ×1,25 · Output ×5">Gewichtet ☆</th><th>Kosten</th><th>Dauer</th>
+  </tr></thead>`;
+  const tbody = document.createElement('tbody');
+  const order = ['baseline','trivial','simple','medium','complex'];
+  res.slice().sort((a,b) =>
+    order.indexOf(a.task_complexity)-order.indexOf(b.task_complexity)
+    || a.task_id.localeCompare(b.task_id)
+    || a.model_label.localeCompare(b.model_label)
+    || a.harness.localeCompare(b.harness)
+  ).forEach(r => {
+    const u = r.usage;
+    const hcls = r.harness==='pi'?'pi':'cc';
+    const err = r.error ? ' ⚠️' : '';
+    tbody.innerHTML += `<tr>
+      <td>${r.task_id}</td><td>${r.model_label}</td>
+      <td><span class="pill ${hcls}">${r.harness}${err}</span></td>
+      <td>${fmtN(u.input_tokens)}</td>
+      <td>${fmtN(u.cache_read)}</td>
+      <td>${fmtN(u.cache_write)}</td>
+      <td>${fmtN(u.output_tokens)}</td>
+      <td><b>${fmtN(u.total_tokens)}</b></td>
+      <td>${fmtN(u.input_tokens*1 + u.cache_read*0.1 + u.cache_write*1.25 + u.output_tokens*5)}</td>
+      <td>${fmtCost(u.cost_usd)}</td>
+      <td>${(r.duration_ms/1000).toFixed(1)}s</td>
+    </tr>`;
+  });
+  tbl.appendChild(tbody);
+
+  // Antworten
+  const respEl = document.getElementById('responses');
+  respEl.innerHTML = '';
+  const tasks = [...new Set(res.map(r => r.task_id))];
+  tasks.forEach(tid => {
+    const group = res.filter(r => r.task_id === tid);
+    const det = document.createElement('details');
+    det.open = (tasks.length === 1);  // bei nur einer Aufgabe (z.B. eigener Prompt) gleich aufklappen
+    const sum2 = document.createElement('summary');
+    const promptText = (group[0] && group[0].task_prompt) || '';
+    if (tid === 'custom') {
+      const snippet = promptText.length > 60 ? promptText.slice(0, 60) + '…' : promptText;
+      sum2.textContent = 'Eigener Prompt — „' + snippet + '“';
+    } else {
+      sum2.textContent = tid;
+    }
+    det.appendChild(sum2);
+
+    // Getesteten Prompt anzeigen (steht in jedem Ergebnis als task_prompt).
+    if (promptText) {
+      const pbox = document.createElement('div');
+      pbox.className = 'prompt-box';
+      pbox.innerHTML = `<div class="plabel">Getesteter Prompt</div><pre></pre>`;
+      pbox.querySelector('pre').textContent = promptText;
+      det.appendChild(pbox);
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'resp-grid';
+    const mdls = [...new Set(group.map(r => r.model_label))];
+    mdls.forEach(ml => {
+      group.filter(r => r.model_label===ml).sort((a,b)=>a.harness.localeCompare(b.harness)).forEach(r => {
+        const box = document.createElement('div');
+        box.className = 'resp-box';
+        const txt = r.error ? ('⚠️ '+r.error) : (r.response || '(leer)');
+        box.innerHTML = `<h4 class="${r.harness==='pi'?'':''}" style="color:${r.harness==='pi'?'var(--pi)':'var(--cc)'}">${r.harness} · ${ml}</h4>
+          <div class="stat">${fmtN(r.usage.total_tokens)} Tokens · ${fmtCost(r.usage.cost_usd)}</div>
+          <pre></pre>`;
+        box.querySelector('pre').textContent = txt;
+        grid.appendChild(box);
+      });
+    });
+    det.appendChild(grid);
+    respEl.appendChild(det);
+  });
+
+  document.getElementById('resultsCard').scrollIntoView({behavior:'smooth'});
+}
+
+// --- Frühere Läufe ---------------------------------------------------------
+async function refreshPast() {
+  const r = await fetch('/api/results');
+  const items = await r.json();
+  const sel = document.getElementById('pastRuns');
+  sel.innerHTML = '<option value="">— auswählen —</option>';
+  items.forEach(it => {
+    const d = it.started_at ? new Date(it.started_at).toLocaleString('de-DE') : '';
+
+    // Was wurde getestet? Aufgaben (oder eigener Prompt), Harnesses, Modelle.
+    let was;
+    if (it.custom_snippet) {
+      was = `Eigener Prompt: „${it.custom_snippet}“`;
+    } else if (it.task_ids && it.task_ids.length) {
+      was = it.task_ids.length <= 3
+        ? it.task_ids.join(', ')
+        : `${it.task_ids.slice(0,3).join(', ')} +${it.task_ids.length-3}`;
+    } else {
+      was = `${it.num_results} Läufe`;
+    }
+
+    const hMap = { 'pi': 'Pi', 'claude-code': 'Claude Code' };
+    const harn = (it.harnesses || []).map(h => hMap[h] || h).join(' vs ');
+    const mdl  = (it.models || []).join(', ');
+
+    const parts = [was];
+    if (harn) parts.push(harn);
+    if (mdl)  parts.push(mdl);
+    if (d)    parts.push(d);
+    sel.innerHTML += `<option value="${it.run_id}">${parts.join('  ·  ')}</option>`;
+  });
+}
+async function loadPast() {
+  const id = document.getElementById('pastRuns').value;
+  if (!id) return;
+  const r = await fetch('/api/result?run_id=' + id);
+  const suite = await r.json();
+  renderResults(suite);
+}
+
+init();
+</script>
+</body>
+</html>
