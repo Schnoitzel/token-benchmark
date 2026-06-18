@@ -112,8 +112,8 @@ Realmessungen sind aber jederzeit reproduzierbar abrufbar.
 - [x] 2.3 `stats.py`: `median`, `stdev`, `iqr`, `min/max`, `rel_spread`, `n` + `summary()`. — 10 Tests, grün.
 - [x] 2.4 `core.py`: Aggregate (Median+Streuung je Kombination) via
   stats.build_aggregates in suite['aggregates']. — 5 Tests, grün.
-- [ ] 2.5 `report.py`: Median **+ Streuung/Spanne + n** je Kennzahl ausweisen;
-  Hinweis, ab welchem `n` die Aussage belastbar ist.
+- [x] 2.5 `report.py`: Baseline-Block weist Median + min-max + n + relative
+  Streuung (Belastbarkeit) aus. — +2 Tests, grün.
 - [ ] 2.6 Default-`repeat` für Baseline überdenken (Vorschlag: 5) und begründen.
 - [ ] 2.7 `tests/test_stats.py`: Unit-Tests der Statistik.
 - [ ] 2.8 `tests/test_live_measurement.py` (**real, opt-in `RUN_LIVE=1`**):
