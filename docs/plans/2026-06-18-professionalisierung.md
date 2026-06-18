@@ -86,8 +86,8 @@ Realmessungen sind aber jederzeit reproduzierbar abrufbar.
   Modell → `None`, dict- und Objekt-Eingabe. — 11 Tests, grün.
 - [x] 1.4 `tests/test_judge.py`: `extract_json` (Code-Fences/Begleittext/kaputt),
   `map_winner` über beide Swap-Durchläufe, Bias→tie, `overall`-Mittel. — 18 Tests, grün.
-- [ ] 1.5 `tests/test_runners.py`: Parsing aus Fixtures (subprocess.run gemockt,
-  inkl. Timeout- und Fehlerpfad).
+- [x] 1.5 `tests/test_runners.py`: Parsing aus Fixtures (subprocess.run gemockt,
+  inkl. Timeout- und Fehlerpfad). — 9 Tests, grün.
 - [ ] 1.6 `tests/test_report.py`: `med`/`spread`/`ratio`/`_overhead_rows`,
   Baseline-Bevorzugung, Fehler-Ausschluss.
 - [ ] 1.7 `tests/test_core.py`: Filter + `apply_unified_cost` (Harness-Wert bleibt
