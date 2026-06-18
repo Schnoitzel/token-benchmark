@@ -44,8 +44,16 @@ In der Oberfläche kannst du:
 - den Benchmark mit einem Button starten
 - den **Fortschritt live** mitverfolgen (Fortschrittsbalken + Log)
 - Ergebnisse als **Kennzahlen-Kacheln, Balkendiagramme und Tabellen** sehen
+  (Median + Streuung min–max + n, korrekt über Wiederholungen aggregiert)
+- jede Kennzahl per **Drill-down „Wie wurde das erhoben?"** bis auf Roh-Tokens,
+  Formel und Provenienz nachvollziehen
 - die **Antworten beider Harnesses nebeneinander** vergleichen (Qualität)
 - **frühere Läufe** wieder laden
+- in den **Präsentationsmodus** wechseln (große Slides der 3 Kernzahlen, mit
+  ←/→ und ESC) – ideal für den Beamer
+- zwischen **dunklem und hellem Theme** umschalten (bleibt gespeichert)
+- den **Bericht als Markdown herunterladen** oder die Seite **drucken / als PDF**
+  speichern (Druckansicht ist themenunabhängig hell und lesbar)
 
 Server beenden: `Strg+C` im Terminal.
 

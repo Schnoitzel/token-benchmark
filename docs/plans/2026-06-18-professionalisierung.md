@@ -1,6 +1,6 @@
 # Professionalisierung Token-Benchmark (Pi vs Claude Code)
 
-- **Status:** In Progress
+- **Status:** Done (alle Phasen abgeschlossen, getaggt v0.3-phase3-show)
 - **Date:** 2026-06-18
 - **Branch/Worktree:** main (kleine, in sich geschlossene Schritte; bei Bedarf Feature-Branches)
 
@@ -144,13 +144,20 @@ Kosten-Faktor, Qualitäts-Delta.
 - [x] 3.4 **Praesentationsmodus:** "Praesentieren"-Slide (3 Kernzahlen) +
   Theme-Umschalter (dunkel/hell, localStorage). (UI v1, via worker-Subagent)
   Offen fuer v2: mehrere Slides durchklickbar.
-- [ ] 3.5 **Live-Robustheit:** Fehler/Timeouts sichtbar abfangen, Buttons sperren,
-  SSE-Abbruch sauber behandeln, klare Status-Hinweise.
-- [ ] 3.6 **Export:** Markdown-Download (Report) per Button; PDF optional via
-  Druckansicht (`window.print()` + Print-CSS - ohne Abhängigkeit).
-- [ ] 3.7 Beide Modi prominent: gespeicherte Läufe laden **und** Live-Prompt
-  eingeben, klar getrennt und erklärt.
-- [ ] 3.8 README + `docs/methodik.md` final, Screenshots optional. Commit + Push.
+- [x] 3.5 **Live-Robustheit:** `lockInputs()` sperrt alle Eingaben während eines
+  Laufs + Freigabe im Fehlerfall (onerror UND try/catch in onmessage -> kein
+  Dauer-Lock); rote Fehlermeldung bei Abbruch; pro-Lauf-Fehler als Badge sichtbar.
+- [x] 3.6 **Export:** `/api/report`-Endpunkt (report.build_markdown, safe_run_id);
+  „Bericht (.md)"-Download per fetch+blob mit ok-Check; „Drucken/PDF" via
+  window.print() + themenunabhängiges Print-CSS. Test-first (Backend).
+- [x] 3.7 Beide Modi prominent: Zwischenüberschriften „Neuen Benchmark starten"
+  und „Früheren Lauf ansehen" mit Erklärtext; loadPast() wiederhergestellt.
+- [x] 3.8 README final (UI-Features), `docs/methodik.md` aktuell. Commit + Push.
+  (Screenshots optional - ausgelassen, da WSL ohne Linux-Browser.)
+
+**Reviewer (Phasenende) durchgelaufen:** 1 Critical (loadPast verloren) + 2 High
+(Export-Fehler-JSON, SSE-Dauer-Lock) + 2 Medium (Fehler-Badge, TOCTOU) gefunden
+und behoben. JS via `node --check` validiert, 99 Tests grün.
 
 ## Test Strategy
 - **Ausführen:** `python3 -m unittest discover -s tests` (schnell, kostenlos,
@@ -173,13 +180,13 @@ Kosten-Faktor, Qualitäts-Delta.
   keine Live-Kosten.) → Default: ja, da reiner Mehrwert.
 
 ## Definition of Done
-- [ ] Unit-Test-Suite grün via `python3 -m unittest`; deckt Pricing, Judge, Report,
-  Stats, Core-Filter, Runner-Parsing ab.
-- [ ] Mind. ein **realer** Mess-Test liefert die Overhead-Kernzahl reproduzierbar
+- [x] Unit-Test-Suite grün via `python3 -m unittest`; deckt Pricing, Judge, Report,
+  Stats, Core-Filter, Runner-Parsing, Server-Config/Sicherheit ab.
+- [x] Mind. ein **realer** Mess-Test liefert die Overhead-Kernzahl reproduzierbar
   (n>1, inkl. Streuung), opt-in lauffähig.
-- [ ] Cache-/Overhead-Semantik verifiziert und in `docs/methodik.md` dokumentiert.
-- [ ] Report **und** UI weisen für jede Zahl Median + Streuung + n + Herkunft aus;
+- [x] Cache-/Overhead-Semantik verifiziert und in `docs/methodik.md` dokumentiert.
+- [x] Report **und** UI weisen für jede Zahl Median + Streuung + n + Herkunft aus;
   Drill-down zu Rohdaten/Formel vorhanden.
-- [ ] UI demonstriert gespeicherte + Live-Ergebnisse, show-tauglich robust,
+- [x] UI demonstriert gespeicherte + Live-Ergebnisse, show-tauglich robust,
   Präsentationsmodus + Export vorhanden.
-- [ ] Alles committet und nach GitHub gepusht.
+- [x] Alles committet und nach GitHub gepusht.
