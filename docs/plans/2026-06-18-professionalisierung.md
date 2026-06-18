@@ -121,8 +121,9 @@ Realmessungen sind aber jederzeit reproduzierbar abrufbar.
 - [x] 2.8 `tests/test_live_measurement.py` (real, opt-in `RUN_LIVE=1`):
   Haiku-Baseline n=3, prueft CC-Overhead >5x Pi + rel. Streuung (Pi<5%,
   CC<10%). CI-sicher uebersprungen. Real verifiziert (3 gruen, ~19s).
-- [ ] 2.9 Einen belastbaren Referenzlauf erzeugen, Befund + Zahlen in
-  `docs/methodik.md` dokumentieren. Commit + Push.
+- [x] 2.9 Referenzlauf dcf6c6db (alle Modelle, 3x): Faktor 7,2-9,5x,
+  Streuung <0,1%. Evidenz (JSON+Report) unter docs/evidence/, Mehrmodell-
+  Tabelle in methodik.md.
 
 ### Phase 3 - Show-ready (Präsentation & Nachvollziehbarkeit)
 - [ ] 3.1 **Methodik-/Provenienz-Panel** in der UI: Versionen, Flags, Sandbox,
