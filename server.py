@@ -21,11 +21,36 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+import pricing
 from core import filter_models, filter_tasks, run_benchmark_iter
 from models import MODELS
 from tasks import TASKS, Task
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def build_config() -> dict:
+    """Konfiguration fuer die UI: Modelle, Tasks UND Preise/Cache-Faktoren.
+    Die Preise kommen aus pricing.py (EINE Quelle) - so muss das Frontend nichts
+    hartkodieren und bleibt mit dem Backend konsistent."""
+    return {
+        "models": [{"label": m.label, "tier": m.tier} for m in MODELS],
+        "tasks": [
+            {"id": t.id, "complexity": t.complexity,
+             "description": t.description, "use_tools": t.use_tools}
+            for t in TASKS
+        ],
+        "pricing": {
+            "models": {
+                label: {"input": inp, "output": out}
+                for label, (inp, out) in pricing.PRICES.items()
+            },
+            "cache_multipliers": {
+                "write": pricing.CACHE_WRITE_MULT,
+                "read": pricing.CACHE_READ_MULT,
+            },
+        },
+    }
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -64,16 +89,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/config":
-            self._send_json({
-                "models": [
-                    {"label": m.label, "tier": m.tier} for m in MODELS
-                ],
-                "tasks": [
-                    {"id": t.id, "complexity": t.complexity,
-                     "description": t.description, "use_tools": t.use_tools}
-                    for t in TASKS
-                ],
-            })
+            self._send_json(build_config())
             return
 
         if path == "/api/results":
