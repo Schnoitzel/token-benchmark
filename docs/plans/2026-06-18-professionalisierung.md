@@ -92,11 +92,16 @@ Realmessungen sind aber jederzeit reproduzierbar abrufbar.
   Baseline-Bevorzugung, Fehler-Ausschluss. - 11 Tests, grün.
 - [x] 1.7 `tests/test_core.py`: Filter + `apply_unified_cost` (Harness-Wert bleibt
   in `cost_harness_usd`, `cost_usd` wird einheitlich überschrieben). - 9 Tests, grün.
-- [x] 1.8 README: Abschnitt „Tests“ (`python3 -m unittest discover -s tests`). — erledigt.
+- [x] 1.8 README: Abschnitt "Tests" (`python3 -m unittest discover -s tests`). - erledigt.
 - [x] 1.9 GitHub-Actions-Workflow für Unit-Tests (öffentlich, gratis; nur Mocks,
-  keine Live-Kosten). — erledigt (`.github/workflows/tests.yml`).
+  keine Live-Kosten). - erledigt (`.github/workflows/tests.yml`).
 
-### Phase 2 - Zahlen wasserdicht (Methodik)
+### Phase 2 — Zahlen wasserdicht (Methodik)
+- [x] 2.0 **Refactor `utils.py`** (aus architect-Befund): gemeinsame Helfer
+  konsolidieren — `fmt_cost`/`fmt_n`/`ratio` (Inkonsistenz main `.4f` vs report
+  `.3f` → vereinheitlicht `.4f`), `load_suite`/`latest_suite_path`,
+  `overhead_tokens(usage)`. Test-first (13 Tests), Suite 77 grün,
+  report/judge/main importieren daraus, CLI+Report end-to-end geprueft.
 - [ ] 2.1 **Cache-Semantik verifizieren:** Baseline real laufen lassen, Rohdaten
   inspizieren - zahlt jeder frische Subprozess `cache_write`, ist `cache_read`≈0?
   Befund in `docs/methodik.md` festhalten.
