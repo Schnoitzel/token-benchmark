@@ -65,6 +65,13 @@ Tokens zeigen den Umfang, Kosten den finanziellen Effekt.
 - **Wiederholungen** (`--repeat`): Mehrere Laeufe je Kombination erlauben
   Median + Streuung statt Einzelwert. Die Baseline-Streuung ist extrem klein
   (σ < 2 Tokens), die Kernzahl damit hoch belastbar.
+  - **Empfehlung / Default-Entscheidung:** Der CLI-/UI-Default bleibt bewusst
+    `repeat = 1` (kostet am wenigsten, schnelle Exploration). Fuer **belastbare,
+    zitierfaehige** Zahlen – v.a. die Baseline-Overhead-Kernzahl – wird
+    `--repeat 5` empfohlen (so entstanden die Zahlen oben). Begruendung: Bei der
+    beobachteten Mini-Streuung (rel. Streuung < 0,1 %) reichen 5 Wiederholungen
+    voellig, um Median + Spanne stabil auszuweisen; mehr bringt kaum Mehrwert
+    bei linear steigenden Kosten.
 - **Provenienz**: Jede Suite-JSON enthaelt Versionen, Flags, Preise, Cache-Faktoren
   und Plattform (`provenance`-Block) — der Lauf ist nachvollziehbar reproduzierbar.
 - **Einheitliche Kosten**: Die Kosten werden fuer *beide* Harnesses aus *einer*

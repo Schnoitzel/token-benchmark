@@ -114,8 +114,10 @@ Realmessungen sind aber jederzeit reproduzierbar abrufbar.
   stats.build_aggregates in suite['aggregates']. — 5 Tests, grün.
 - [x] 2.5 `report.py`: Baseline-Block weist Median + min-max + n + relative
   Streuung (Belastbarkeit) aus. — +2 Tests, grün.
-- [ ] 2.6 Default-`repeat` für Baseline überdenken (Vorschlag: 5) und begründen.
-- [ ] 2.7 `tests/test_stats.py`: Unit-Tests der Statistik.
+- [x] 2.6 Default-`repeat` begründet: Default bleibt 1 (Kosten/Exploration),
+  Empfehlung `--repeat 5` fuer belastbare Zahlen — dokumentiert in methodik.md.
+- [x] 2.7 `tests/test_stats.py`: Unit-Tests der Statistik (median/stdev/iqr/
+  rel_spread/summary/build_aggregates). — 14 Tests, test-first in 2.3/2.4.
 - [ ] 2.8 `tests/test_live_measurement.py` (**real, opt-in `RUN_LIVE=1`**):
   Baseline-Overhead für ein günstiges Modell, n>1; prüft Plausibilität
   (CC-Overhead deutlich > Pi) und **niedrige relative Streuung** (Reproduzierbarkeit).
