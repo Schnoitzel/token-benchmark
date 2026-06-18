@@ -44,6 +44,13 @@ class TestExtractJson(unittest.TestCase):
         text = '{"winner":"A"} dann noch {"winner":"B"}'
         self.assertEqual(judge.extract_json(text), {"winner": "A"})
 
+    def test_geschweifte_klammern_im_string(self):
+        # ein '{' im String-Wert darf das Parsen nicht zerstoeren
+        text = '{"j": "ein {falscher} text", "winner": "A"}'
+        self.assertEqual(
+            judge.extract_json(text), {"j": "ein {falscher} text", "winner": "A"}
+        )
+
 
 class TestOverall(unittest.TestCase):
     def test_mittelwert_aller_kriterien(self):
@@ -51,7 +58,7 @@ class TestOverall(unittest.TestCase):
         self.assertEqual(judge.overall(scores), 4.0)
 
     def test_fehlende_kriterien_zaehlen_als_null(self):
-        # nur 1 von 5 Kriterien gesetzt -> Mittel = 5/5 = 1.0
+        # nur 'korrektheit'=5, restliche 4 fehlen (=0) -> (5+0+0+0+0)/5 = 1.0
         self.assertEqual(judge.overall({"korrektheit": 5}), 1.0)
 
 
@@ -116,8 +123,29 @@ class TestJudgePairSwap(unittest.TestCase):
         # cc_scores = avg(P1.scores_B=1, P2.scores_A=1) = 1
         self.assertAlmostEqual(res["cc_overall"], 1.0, places=6)
 
-    def test_kaputte_richterantwort_gibt_fehler(self):
+    def test_konsistenter_sieger_mit_verschiedenen_scores(self):
+        # beide Durchlaeufe waehlen den Pi-Slot, aber mit unterschiedlichen Scores
+        # P1: A=pi -> winner A; P2: B=pi -> winner B  => konsistent pi, kein Bias
+        with patch.object(judge, "run_judge_once",
+                          side_effect=[_verdict("A", 5, 1), _verdict("B", 3, 1)]):
+            res = judge.judge_pair("pi", "cc", "prompt", judge_model=None)
+        self.assertEqual(res["winner"], "pi")
+        self.assertFalse(res["position_bias"])
+        # pi = avg(P1.scores_A=5, P2.scores_B=1) = 3
+        self.assertAlmostEqual(res["pi_overall"], 3.0, places=6)
+
+    def test_erster_durchlauf_none_gibt_fehler(self):
         with patch.object(judge, "run_judge_once", side_effect=[None, _verdict("A", 5, 2)]):
+            res = judge.judge_pair("pi", "cc", "prompt", judge_model=None)
+        self.assertIn("error", res)
+
+    def test_zweiter_durchlauf_none_gibt_fehler(self):
+        with patch.object(judge, "run_judge_once", side_effect=[_verdict("A", 5, 2), None]):
+            res = judge.judge_pair("pi", "cc", "prompt", judge_model=None)
+        self.assertIn("error", res)
+
+    def test_beide_durchlaeufe_none_gibt_fehler(self):
+        with patch.object(judge, "run_judge_once", side_effect=[None, None]):
             res = judge.judge_pair("pi", "cc", "prompt", judge_model=None)
         self.assertIn("error", res)
 
@@ -137,6 +165,12 @@ class TestSummarize(unittest.TestCase):
         self.assertEqual(s["position_bias_count"], 1)
         # score_delta = cc_mean - pi_mean = 3.5 - 3.0 = 0.5
         self.assertAlmostEqual(s["score_delta"], 0.5, places=6)
+
+    def test_leere_liste_crasht_nicht(self):
+        s = judge.summarize([])
+        self.assertEqual(s["n_pairs"], 0)
+        self.assertEqual(s["wins"], {"pi": 0, "cc": 0, "tie": 0})
+        self.assertEqual(s["score_delta"], 0.0)
 
 
 if __name__ == "__main__":

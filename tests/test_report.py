@@ -45,6 +45,9 @@ class TestKleineHelfer(unittest.TestCase):
 
     def test_fmt_n_tausender(self):
         self.assertEqual(report.fmt_n(12345), "12,345")
+        self.assertEqual(report.fmt_n(0), "0")
+        self.assertEqual(report.fmt_n(999), "999")
+        self.assertEqual(report.fmt_n(1_234_567_890), "1,234,567,890")
 
     def test_ratio(self):
         self.assertEqual(report.ratio(10, 5), "2.0x")
@@ -94,6 +97,18 @@ class TestOverheadRows(unittest.TestCase):
         _, pi_ov, _ = rows[0]
         # output (999) zaehlt NICHT zum Overhead
         self.assertEqual(pi_ov, 500 + 100 + 400)
+
+    def test_fallback_ohne_baseline(self):
+        # keine baseline-Task vorhanden -> nutzt alle Ergebnisse statt leer
+        results = [
+            make_result("pi", "Haiku 4.5", complexity="trivial", task_id="t", inp=200),
+            make_result("claude-code", "Haiku 4.5", complexity="trivial", task_id="t", inp=10, cr=2000, cw=500),
+        ]
+        rows = report._overhead_rows(results)
+        self.assertEqual(len(rows), 1)
+        model, pi_ov, cc_ov = rows[0]
+        self.assertEqual(pi_ov, 200)
+        self.assertEqual(cc_ov, 10 + 2000 + 500)
 
 
 if __name__ == "__main__":
