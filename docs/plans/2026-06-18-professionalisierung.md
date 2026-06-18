@@ -106,8 +106,9 @@ Realmessungen sind aber jederzeit reproduzierbar abrufbar.
   Pi kein Caching (Overhead=input 3069); CC Prompt-Cache (29296 = input 10 +
   cache_read 21506 + cache_write 7778); Total-Overhead warm/kalt-stabil (σ<2);
   Faktor 9,55×. Dokumentiert in `docs/methodik.md`.
-- [ ] 2.2 Overhead-Erzählung an Befund angleichen (Report-/UI-Texte): Overhead =
-  `input + cache_write (+ cache_read)`, klar erklärt, keine angreifbare Formulierung.
+- [x] 2.2 Overhead-Erzählung an Befund angleichen: report.py-Footer + README
+  korrigiert (Overhead=input+cache_read+cache_write, Pi ohne Cache vs CC mit
+  Prompt-Cache, ~9,5× Token / ~5× Kosten), Verweis auf docs/methodik.md.
 - [ ] 2.3 `stats.py`: `median`, `stdev`, `iqr`, `min/max`, `rel_spread`, `n`.
 - [ ] 2.4 `core.py`: Streuungs-Kennzahlen je Kombination in die Suite-JSON
   aufnehmen (damit UI/Report sie ohne Neuberechnung zeigen können).
