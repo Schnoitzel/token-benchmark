@@ -24,11 +24,11 @@ Aufruf:
 Ergebnis wird in dieselbe JSON unter dem Schluessel "quality" geschrieben.
 """
 
-import glob
 import json
 import statistics
 import sys
 
+import utils
 from models import MODELS
 from runners import run_pi
 from tasks import Task
@@ -308,14 +308,11 @@ def print_summary(quality: dict) -> None:
 
 
 def load_suite(path: str | None) -> tuple[str, dict]:
+    """Gibt (Pfad, Suite) zurueck. Bei None die neueste Datei."""
     if path is None:
-        files = sorted(glob.glob("results/benchmark-*.json"))
-        if not files:
-            raise SystemExit("Keine Ergebnisdateien in results/ gefunden.")
-        path = files[-1]
+        path = utils.latest_suite_path()
         print(f"Lade {path}")
-    with open(path, encoding="utf-8") as f:
-        return path, json.load(f)
+    return path, utils.load_suite(path)
 
 
 def main() -> None:

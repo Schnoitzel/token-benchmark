@@ -16,12 +16,13 @@ Aufruf:
   python3 report.py results/benchmark-xxxx.json  # bestimmte Datei
 """
 
-import glob
-import json
 import os
 import statistics
 import sys
 from collections import defaultdict
+
+# Gemeinsame Helfer (frueher hier dupliziert) kommen jetzt aus utils.
+from utils import fmt_cost, fmt_n, ratio, overhead_tokens, load_suite as _load_suite, latest_suite_path
 
 # Reihenfolge der Komplexitaetsstufen (Baseline zuerst)
 ORDER = ["baseline", "trivial", "simple", "medium", "complex"]
@@ -32,14 +33,11 @@ def order_idx(complexity: str) -> int:
 
 
 def load_suite(path: str | None) -> dict:
+    """Bei None die neueste Datei laden (duenner Wrapper um utils)."""
     if path is None:
-        files = sorted(glob.glob("results/benchmark-*.json"))
-        if not files:
-            raise SystemExit("Keine Ergebnisdateien in results/ gefunden.")
-        path = files[-1]
+        path = latest_suite_path()
         print(f"Lade {path}")
-    with open(path, encoding="utf-8") as f:
-        return json.load(f)
+    return _load_suite(path)
 
 
 # --- Aggregation ------------------------------------------------------------
@@ -66,23 +64,6 @@ def spread(rows: list[dict], *keys) -> tuple[float, float, float, int]:
     if not vals:
         return 0.0, 0.0, 0.0, 0
     return med(vals), min(vals), max(vals), len(vals)
-
-
-def fmt_cost(usd: float) -> str:
-    if usd < 0.001:
-        return f"{usd * 1000:.3f}m$"
-    return f"${usd:.5f}"
-
-
-def fmt_n(n: float) -> str:
-    return f"{round(n):,}"
-
-
-def ratio(a: float, b: float) -> str:
-    if not a or not b:
-        return "n/a"
-    r = a / b
-    return f"{r:.1f}x" if r >= 1 else f"{1 / r:.1f}x weniger"
 
 
 # --- Konsolen-Zusammenfassung ----------------------------------------------
@@ -172,8 +153,7 @@ def _overhead_rows(results: list[dict]):
     use = baseline if baseline else results
 
     def ov(r):
-        u = r["usage"]
-        return u["input_tokens"] + u["cache_read"] + u["cache_write"]
+        return overhead_tokens(r["usage"])
 
     by_model: dict[str, list[dict]] = defaultdict(list)
     for r in use:

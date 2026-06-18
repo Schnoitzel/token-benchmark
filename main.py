@@ -30,17 +30,12 @@ import subprocess
 import sys
 
 from core import filter_models, filter_tasks, run_benchmark_iter
+from utils import fmt_cost
 
 # --- ANSI-Farben ------------------------------------------------------------
 RESET = "\033[0m"; BOLD = "\033[1m"; DIM = "\033[2m"
 GREEN = "\033[32m"; YELLOW = "\033[33m"; RED = "\033[31m"
 CYAN = "\033[36m"; MAGENTA = "\033[35m"
-
-
-def fmt_cost(usd: float) -> str:
-    if usd < 0.001:
-        return f"{usd * 1000:.4f}m$"
-    return f"${usd:.5f}"
 
 
 def print_result(r: dict) -> None:
