@@ -188,6 +188,26 @@ def _cell_stat(s: dict) -> str:
     return f"{fmt_n(s['median'])} ({fmt_n(s['min'])}–{fmt_n(s['max'])}, n={s['n']})"
 
 
+def _spread_fmt(rows: list[dict], *keys) -> str:
+    """Hilfsfunktion fuer Markdown-Tabelle: 'Median (min–max)' eines Feldes."""
+    m, lo, hi, _ = spread(rows, *keys)
+    if lo == hi:
+        return fmt_n(m)              # kein Streuungsband wenn konstant
+    return f"{fmt_n(m)} ({fmt_n(lo)}–{fmt_n(hi)})"
+
+
+def _overhead_spread_fmt(rows: list[dict]) -> str:
+    """Overhead (= input+cache_r+cache_w) als 'Median (min–max)' formatiert."""
+    vals = [overhead_tokens(r["usage"]) for r in rows]
+    if not vals:
+        return "0"
+    m = med(vals)
+    lo, hi = min(vals), max(vals)
+    if lo == hi:
+        return fmt_n(m)
+    return f"{fmt_n(m)} ({fmt_n(lo)}–{fmt_n(hi)})"
+
+
 # --- Markdown-Bericht -------------------------------------------------------
 
 def build_markdown(suite: dict) -> str:
@@ -316,8 +336,9 @@ def build_markdown(suite: dict) -> str:
         L.append("")
         L.append(f"- **Komplexitaet:** {tr['task_complexity']}")
         L.append("")
-        L.append("| Modell | Harness | n | Input | Output | Cache R | Cache W | Total (min-max) | Kosten (min-max) | Dauer |")
-        L.append("|--------|---------|--:|------:|-------:|--------:|--------:|----------------:|-----------------:|------:|")
+        L.append("| Modell | Harness | n | input (med, min-max) | cache↑W (med, min-max) | cache↓R (med, min-max) | output (med, min-max) | Overhead (med, min-max) | Total (med, min-max) | Kosten (med, min-max) | Dauer |")
+        L.append("|--------|---------|--:|---------------------:|-----------------------:|-----------------------:|----------------------:|------------------------:|---------------------:|----------------------:|------:|")
+        L.append("|        |         |   | *input-Tokens*       | *1,25× Preis, 5-Min-Cache* | *0,10× Preis* | *generierte Antwort* | *=input+cacheW+cacheR* | *=Overhead+output* |  |  |")
 
         task_results = [r for r in results if r["task_id"] == task_id]
         # nach (modell, harness) aggregieren
@@ -326,17 +347,18 @@ def build_markdown(suite: dict) -> str:
             by_mh[(r["model_label"], r["harness"])].append(r)
 
         for (model_label, harness), rows in sorted(by_mh.items()):
-            t_med, t_min, t_max, n = spread(rows, "usage", "total_tokens")
+            _, _, _, n = spread(rows, "usage", "total_tokens")
             c_med, c_min, c_max, _ = spread(rows, "usage", "cost_usd")
             d_med = median_of(rows, "duration_ms")
             L.append(
                 f"| {model_label} | {harness} | {n} | "
-                f"{fmt_n(median_of(rows, 'usage', 'input_tokens'))} | "
-                f"{fmt_n(median_of(rows, 'usage', 'output_tokens'))} | "
-                f"{fmt_n(median_of(rows, 'usage', 'cache_read'))} | "
-                f"{fmt_n(median_of(rows, 'usage', 'cache_write'))} | "
-                f"{fmt_n(t_med)} ({fmt_n(t_min)}-{fmt_n(t_max)}) | "
-                f"{fmt_cost(c_med)} ({fmt_cost(c_min)}-{fmt_cost(c_max)}) | "
+                f"{_spread_fmt(rows, 'usage', 'input_tokens')} | "
+                f"{_spread_fmt(rows, 'usage', 'cache_write')} | "
+                f"{_spread_fmt(rows, 'usage', 'cache_read')} | "
+                f"{_spread_fmt(rows, 'usage', 'output_tokens')} | "
+                f"{_overhead_spread_fmt(rows)} | "
+                f"{_spread_fmt(rows, 'usage', 'total_tokens')} | "
+                f"{fmt_cost(c_med)} ({fmt_cost(c_min)}–{fmt_cost(c_max)}) | "
                 f"{round(d_med/100)/10}s |"
             )
         L.append("")

@@ -131,5 +131,59 @@ class TestOverheadRows(unittest.TestCase):
         self.assertEqual(cc_ov, 10 + 2000 + 500)
 
 
+class TestMarkdownBreakdown(unittest.TestCase):
+    """Phase B: Markdown-Tabelle zeigt Streuung fuer alle Token-Felder + Overhead-Spalte."""
+
+    def _make_suite(self):
+        """Mini-Suite mit 2 Wiederholungen (Baseline, Haiku, Pi + CC)."""
+        results = [
+            make_result("pi", "Haiku 4.5", inp=3070, out=4,  cr=0,     cw=0,    cost=0.003),
+            make_result("pi", "Haiku 4.5", inp=3068, out=4,  cr=0,     cw=0,    cost=0.003),
+            make_result("claude-code", "Haiku 4.5", inp=10,   out=43, cr=21506, cw=7778, cost=0.012),
+            make_result("claude-code", "Haiku 4.5", inp=10,   out=43, cr=21506, cw=7780, cost=0.012),
+        ]
+        for i, r in enumerate(results):
+            r["repeat_index"] = i % 2
+            r["task_prompt"] = "Reply with exactly: OK"
+            r["response"] = "OK"
+            r["timestamp"] = "2026-06-25T00:00:00+00:00"
+        return {
+            "run_id": "test1234",
+            "started_at": "2026-06-25T00:00:00+00:00",
+            "finished_at": "2026-06-25T00:01:00+00:00",
+            "results": results,
+            "aggregates": [],
+            "provenance": {"repeat": 2},
+        }
+
+    def test_markdown_enthaelt_overhead_spalte(self):
+        md = report.build_markdown(self._make_suite())
+        self.assertIn("Overhead", md)
+
+    def test_markdown_enthaelt_cache_write_spalte(self):
+        md = report.build_markdown(self._make_suite())
+        # Cache-Write-Spalte muss als eigene Spalte im Header stehen
+        self.assertIn("cache↑W", md)
+
+    def test_markdown_zeigt_streuung_fuer_input(self):
+        md = report.build_markdown(self._make_suite())
+        # Input Pi: Median=3069, min=3068, max=3070 -> muss min-max zeigen
+        self.assertIn("3,068", md)
+        self.assertIn("3,070", md)
+
+    def test_markdown_zeigt_streuung_fuer_cache_write(self):
+        md = report.build_markdown(self._make_suite())
+        # CC cache_write: 7778 und 7780 -> beide muessen auftauchen
+        self.assertIn("7,778", md)
+        self.assertIn("7,780", md)
+
+    def test_overhead_wert_korrekt_berechnet(self):
+        md = report.build_markdown(self._make_suite())
+        # Pi Overhead = input(3069 Median) + cr(0) + cw(0) = 3069
+        # CC Overhead = input(10) + cr(21506) + cw(7779 Median) = 29295
+        self.assertIn("3,069", md)
+        self.assertIn("29,295", md)
+
+
 if __name__ == "__main__":
     unittest.main()
