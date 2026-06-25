@@ -1,6 +1,6 @@
 # Token-Breakdown & Vollständiger Referenzlauf (n=10)
 
-- **Status:** Draft
+- **Status:** In Progress
 - **Date:** 2026-06-25
 - **Branch/Worktree:** main (kleine, in sich geschlossene Schritte)
 
@@ -97,40 +97,40 @@ Alle Werte = Median (n=10). Streuung (min–max) im Drill-down oder als
 ## Task Breakdown
 
 ### Phase A — Sofort-Fixes (kein Risiko)
-- [ ] A.1 `models.py`: `claude-sonnet-4-5` → `claude-sonnet-4-6`;
+- [x] A.1 `models.py`: `claude-sonnet-4-5` → `claude-sonnet-4-6`;
       Kommentar mit Verifikations-Datum + Pi-Modell-Liste-Quelle.
-- [ ] A.2 `tests/test_models.py`: Prüft pi_model != cc_model für alle
+- [x] A.2 `tests/test_models.py`: Prüft pi_model != cc_model für alle
       Einträge; pi_model in bekannter Allowlist; kein Leerstring.
-- [ ] A.3 Suite grün (`python3 -m unittest discover -s tests`), commit.
+- [x] A.3 Suite grün (`python3 -m unittest discover -s tests`), commit.
 
 ### Phase B — Report.py: vollständiges Token-Breakdown
-- [ ] B.1 `report.py`: Markdown-Tabelle zeigt Median (min–max) für
+- [x] B.1 `report.py`: Markdown-Tabelle zeigt Median (min–max) für
       *alle* Token-Felder: input, cache_write, cache_read, output,
       overhead (berechnet), total, Kosten. Overhead-Spalte mit
       Formel-Fußnote.
-- [ ] B.2 `tests/test_report.py`: Tests für neue Spalten + Overhead-
+- [x] B.2 `tests/test_report.py`: Tests für neue Spalten + Overhead-
       Berechnung im Report.
-- [ ] B.3 Suite grün, commit.
+- [x] B.3 Suite grün, commit.
 
 ### Phase C — UI: Token-Breakdown in KPI + Drill-down
-- [ ] C.1 `static/index.html` KPI-Tabelle: `cache`-Spalte aufteilen in
+- [x] C.1 `static/index.html` KPI-Tabelle: `cache`-Spalte aufteilen in
       `cache↑ write` und `cache↓ read`; neue Spalte `Overhead` mit
       Formel-Tooltip; Faktor-Zeile zeigt Overhead-Faktor.
-- [ ] C.2 Drill-down: zeigt alle 5 Felder (input, cache_write,
+- [x] C.2 Drill-down: zeigt alle 5 Felder (input, cache_write,
       cache_read, output, overhead) mit Median + min–max + n.
       Kosten-Breakdown (was kostet welches Feld wie viel) als
       erläuternde Zeile.
-- [ ] C.3 JS via `node --check` validieren; manueller Smoke-Test mit
+- [x] C.3 JS via `node --check` validieren; manueller Smoke-Test mit
       vorhandenem Referenzlauf.
-- [ ] C.4 Suite grün, commit.
+- [x] C.4 Suite grün, commit.
 
 ### Phase D — Methodik-Doku korrigieren
-- [ ] D.1 `docs/methodik.md`: Pi-Caching-Abschnitt präzisieren — Haiku
+- [x] D.1 `docs/methodik.md`: Pi-Caching-Abschnitt präzisieren — Haiku
       cacht nicht (input only), Sonnet + Opus aktivieren server-seitigen
       5-Min-Cache ab run#1. Cache-Warm-Kalt-Kosteneffekt dokumentieren
       (Pi Sonnet: $0.012 kalt vs $0.005 warm). Erklärung warum
       Token-Overhead stabil ist, Kosten aber nicht.
-- [ ] D.2 Commit.
+- [x] D.2 Commit.
 
 ### Phase E — Vollständiger Referenzlauf n=10
 
