@@ -110,6 +110,25 @@ def run_benchmark_iter(
 
     results: list[RunResult] = []
     idx = 0
+    os.makedirs("results", exist_ok=True)
+    out_file = f"results/benchmark-{run_id}.json"
+
+    def _save(finished: bool) -> dict:
+        """Schreibt den aktuellen Stand sofort auf Disk.
+        Wird nach jedem Einzelergebnis aufgerufen, damit bei Verbindungsabbruch
+        keine Daten verloren gehen."""
+        result_dicts = [asdict(r) for r in results]
+        suite = {
+            "run_id": run_id,
+            "started_at": started_at,
+            "finished_at": datetime.now(timezone.utc).isoformat() if finished else None,
+            "provenance": build_provenance(repeat),
+            "results": result_dicts,
+            "aggregates": stats.build_aggregates(result_dicts),
+        }
+        with open(out_file, "w", encoding="utf-8") as f:
+            json.dump(suite, f, indent=2, ensure_ascii=False)
+        return suite
 
     for task in tasks:
         for model in models:
@@ -149,6 +168,10 @@ def run_benchmark_iter(
                     res.repeat_index = rep
                     apply_unified_cost(res)
                     results.append(res)
+
+                    # Sofort speichern - unabhaengig ob SSE-Verbindung noch steht
+                    _save(finished=(idx == total))
+
                     yield {
                         "type": "result",
                         "index": idx,
@@ -159,22 +182,5 @@ def run_benchmark_iter(
                     if idx < total:
                         time.sleep(delay)
 
-    finished_at = datetime.now(timezone.utc).isoformat()
-    result_dicts = [asdict(r) for r in results]
-    suite = {
-        "run_id": run_id,
-        "started_at": started_at,
-        "finished_at": finished_at,
-        "provenance": build_provenance(repeat),
-        "results": result_dicts,
-        # Vorberechnete Aggregate (Median+Streuung je Kombination), damit UI und
-        # Report belastbare Zahlen ohne Neuberechnung anzeigen koennen.
-        "aggregates": stats.build_aggregates(result_dicts),
-    }
-
-    os.makedirs("results", exist_ok=True)
-    out_file = f"results/benchmark-{run_id}.json"
-    with open(out_file, "w", encoding="utf-8") as f:
-        json.dump(suite, f, indent=2, ensure_ascii=False)
-
+    suite = _save(finished=True)
     yield {"type": "done", "run_id": run_id, "out_file": out_file, "suite": suite}

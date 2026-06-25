@@ -48,7 +48,8 @@ def build_config() -> dict:
         "models": [{"label": m.label, "tier": m.tier} for m in MODELS],
         "tasks": [
             {"id": t.id, "complexity": t.complexity,
-             "description": t.description, "use_tools": t.use_tools}
+             "description": t.description, "use_tools": t.use_tools,
+             "repo_dir": t.repo_dir}   # None fuer normale Tasks
             for t in TASKS
         ],
         "pricing": {
@@ -193,6 +194,10 @@ class Handler(BaseHTTPRequestHandler):
             self._send_download(md, f"benchmark-{run_id}.md", "text/markdown; charset=utf-8")
             return
 
+        if path == "/api/reset-repo":
+            self._handle_reset_repo(qs)
+            return
+
         if path == "/api/run":
             self._handle_run_stream(qs)
             return
@@ -202,6 +207,59 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         self._send_json({"error": "not found"}, status=404)
+
+    # --- Repo-Reset --------------------------------------------------------
+
+    def _handle_reset_repo(self, qs):
+        """Setzt das angegebene Git-Repo per `git restore .` zurueck.
+        Dateien aus PRESERVE_FILES werden vorher gesichert und danach
+        wiederhergestellt, damit z.B. Testdaten nicht verloren gehen.
+        Erwartet ?dir=<repo_dir> als Query-Parameter."""
+        # Dateien die beim Reset erhalten bleiben sollen (relativ zum Repo)
+        PRESERVE_FILES = ["gdi-datensicherung.json"]
+
+        repo_dir = qs.get("dir", [""])[0]
+        if not repo_dir or not os.path.isdir(repo_dir):
+            self._send_json({"error": "repo_dir nicht gefunden"}, status=400)
+            return
+        if not os.path.isdir(os.path.join(repo_dir, ".git")):
+            self._send_json({"error": "kein Git-Repository"}, status=400)
+            return
+        try:
+            # Zu erhaltende Dateien sichern
+            saved = {}
+            for rel in PRESERVE_FILES:
+                fp = os.path.join(repo_dir, rel)
+                if os.path.isfile(fp):
+                    with open(fp, "rb") as f:
+                        saved[rel] = f.read()
+
+            result = subprocess.run(
+                ["git", "restore", "."],
+                cwd=repo_dir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=15,
+            )
+            if result.returncode != 0:
+                self._send_json({"error": result.stderr.strip()}, status=500)
+                return
+
+            # Gesicherte Dateien wiederherstellen
+            restored = []
+            for rel, data in saved.items():
+                fp = os.path.join(repo_dir, rel)
+                with open(fp, "wb") as f:
+                    f.write(data)
+                restored.append(rel)
+
+            msg = "git restore . erfolgreich"
+            if restored:
+                msg += f" (erhalten: {', '.join(restored)})"
+            self._send_json({"ok": True, "msg": msg})
+        except Exception as e:  # noqa: BLE001
+            self._send_json({"error": str(e)}, status=500)
 
     # --- Benchmark-Lauf als SSE-Stream -------------------------------------
 

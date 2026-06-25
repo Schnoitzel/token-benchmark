@@ -5,9 +5,17 @@ Token-Daten aus deren JSON-Ausgabe.
 WICHTIG (Pi): Im Print-Modus (-p) liest Pi auch stdin und wartet auf EOF.
 Wird Pi mit offener stdin-Pipe gestartet, wartet es ewig. Deshalb leiten wir
 stdin von /dev/null um (stdin=DEVNULL) -> Pi laeuft sofort durch.
+
+Fuer echte Projektaufgaben (task.repo_dir gesetzt):
+  - Harness laeuft direkt im Repo-Verzeichnis (kein leeres Sandbox-Verzeichnis).
+  - Nach dem Run wird `git diff` erfasst und an die Antwort angehaengt.
+  - KEIN Auto-Reset: Dateiaenderungen bleiben bestehen, damit der Nutzer
+    die App bauen und die UI-Aenderungen pruefen kann. Reset erfolgt manuell
+    ueber den UI-Button oder `git restore .`.
 """
 
 import json
+import os
 import subprocess
 import tempfile
 import time
@@ -19,27 +27,29 @@ from tasks import Task
 
 
 # --- Exakte Flags, die wir verwenden (auch fuer den Provenienz-Block) -------
-# Pi laeuft bewusst "blank": keine Kontext-Dateien, keine Prompt-Templates,
-# kein Thinking, ephemere Session, in leerem Arbeitsverzeichnis.
 PI_FLAGS = "-p --mode json --no-session --no-context-files --no-prompt-templates --thinking off --model <id>"
-# Claude Code: nicht-interaktiv, JSON, keine Berechtigungsabfragen.
 CC_FLAGS = "-p --output-format json --model <id> --allow-dangerously-skip-permissions"
+
+# Timeouts in Sekunden
+TIMEOUT_SANDBOX = 120    # leere Sandbox (keine Tools)
+TIMEOUT_SANDBOX_TOOLS = 180  # leere Sandbox mit Tools
+TIMEOUT_REPO = 600       # echtes Repo (viele Dateien, Opus kann lange brauchen)
 
 
 @dataclass
 class TokenUsage:
-    input_tokens: int = 0       # Nicht-gecachte Input-Tokens (inkl. System-Prompt wenn kein Caching)
-    output_tokens: int = 0      # vom Modell generiert
-    cache_read: int = 0         # gecachte Tokens aus vorherigem Aufruf
-    cache_write: int = 0        # System-Prompt beim ersten Aufruf
-    total_tokens: int = 0       # Summe aller obigen
-    cost_usd: float = 0.0       # Gesamtkosten in USD (einheitlich berechnet, siehe pricing.py)
-    cost_harness_usd: float = 0.0  # vom Harness selbst gemeldete Kosten (nur zur Transparenz)
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_read: int = 0
+    cache_write: int = 0
+    total_tokens: int = 0
+    cost_usd: float = 0.0
+    cost_harness_usd: float = 0.0
 
 
 @dataclass
 class RunResult:
-    harness: str                # "pi" | "claude-code"
+    harness: str
     model_label: str
     task_id: str
     task_complexity: str
@@ -48,18 +58,13 @@ class RunResult:
     usage: TokenUsage
     response: str
     timestamp: str
-    repeat_index: int = 0       # 0-basierter Index der Wiederholung (fuer Statistik)
+    repeat_index: int = 0
     error: str | None = None
     raw: dict = field(default_factory=dict)
 
 
 def _run_process(cmd: list[str], timeout_s: int, cwd: str | None = None) -> tuple[str, str, bool]:
-    """Startet einen Prozess mit geschlossenem stdin. Gibt (stdout, stderr, timed_out).
-
-    cwd: Arbeitsverzeichnis. Wir starten beide Harnesses bewusst in einem
-    LEEREN temporaeren Ordner, damit keine AGENTS.md / CLAUDE.md aus dem
-    Projektordner als "Gedaechtnis" mitgeladen wird (fairer Blank-Vergleich).
-    """
+    """Startet einen Prozess mit geschlossenem stdin. Gibt (stdout, stderr, timed_out)."""
     try:
         proc = subprocess.run(
             cmd,
@@ -81,6 +86,23 @@ def _run_process(cmd: list[str], timeout_s: int, cwd: str | None = None) -> tupl
         return out, err, True
 
 
+def _git_diff(repo_dir: str) -> str:
+    """Gibt `git diff` des Repos zurueck (nur geaenderte Dateien, kein Diff von
+    neu erstellten/ungetracken Dateien). Leer wenn nichts geaendert wurde."""
+    try:
+        result = subprocess.run(
+            ["git", "diff"],
+            cwd=repo_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=15,
+        )
+        return result.stdout.strip()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 # --- Pi ---------------------------------------------------------------------
 
 def run_pi(task: Task, model: Model) -> RunResult:
@@ -92,18 +114,34 @@ def run_pi(task: Task, model: Model) -> RunResult:
         "-p", task.prompt,
         "--mode", "json",
         "--no-session",
-        "--no-context-files",     # entfernt AGENTS.md/CLAUDE.md Overhead auf Pi-Seite
-        "--no-prompt-templates",  # keine Prompt-Template-Discovery (blank)
-        "--thinking", "off",      # kein extended thinking, fairer Token-Vergleich
+        "--no-context-files",
+        "--no-prompt-templates",
+        "--thinking", "off",
         "--model", model.pi_model,
     ]
 
-    # Leeres Sandbox-Verzeichnis -> kein Zugriff auf projekteigene AGENTS.md/CLAUDE.md
-    with tempfile.TemporaryDirectory(prefix="benchmark-pi-") as sandbox:
-        stdout, stderr, timed_out = _run_process(cmd, timeout_s=120, cwd=sandbox)
-    duration_ms = int((time.time() - start) * 1000)
-
-    error = "Pi-Run nach 120s abgebrochen (Timeout)" if timed_out else None
+    if task.repo_dir:
+        # Echtes Repo: pruefen ob vorhanden, dann direkt darin laufen
+        if not os.path.isdir(task.repo_dir):
+            return RunResult(
+                harness="pi", model_label=model.label, task_id=task.id,
+                task_complexity=task.complexity, task_prompt=task.prompt,
+                duration_ms=0, usage=TokenUsage(), response="",
+                timestamp=timestamp,
+                error=f"repo_dir nicht gefunden: {task.repo_dir}",
+            )
+        stdout, stderr, timed_out = _run_process(cmd, timeout_s=TIMEOUT_REPO, cwd=task.repo_dir)
+        diff = _git_diff(task.repo_dir)
+        duration_ms = int((time.time() - start) * 1000)
+        error = f"Pi-Run nach {TIMEOUT_REPO}s abgebrochen (Timeout)" if timed_out else None
+    else:
+        # Leeres Sandbox-Verzeichnis (Standard fuer alle anderen Tasks)
+        timeout = TIMEOUT_SANDBOX_TOOLS if task.use_tools else TIMEOUT_SANDBOX
+        with tempfile.TemporaryDirectory(prefix="benchmark-pi-") as sandbox:
+            stdout, stderr, timed_out = _run_process(cmd, timeout_s=timeout, cwd=sandbox)
+        diff = ""
+        duration_ms = int((time.time() - start) * 1000)
+        error = f"Pi-Run nach {timeout}s abgebrochen (Timeout)" if timed_out else None
 
     # JSONL-Zeilen parsen
     events = []
@@ -119,24 +157,32 @@ def run_pi(task: Task, model: Model) -> RunResult:
     usage = TokenUsage()
     response = ""
 
-    # letztes turn_end-Event suchen
-    turn_end = next((e for e in reversed(events) if e.get("type") == "turn_end"), None)
-    if turn_end:
-        msg = turn_end["message"]
-        u = msg["usage"]
+    # Pi meldet Token-Nutzung PRO TURN (nicht kumulativ).
+    # Bei Tool-Runs gibt es viele turn_end-Events -> alle summieren.
+    turn_ends = [e for e in events if e.get("type") == "turn_end"]
+    if turn_ends:
+        inp = sum(e["message"]["usage"]["input"] for e in turn_ends)
+        out = sum(e["message"]["usage"]["output"] for e in turn_ends)
+        c_read = sum(e["message"]["usage"]["cacheRead"] for e in turn_ends)
+        c_write = sum(e["message"]["usage"]["cacheWrite"] for e in turn_ends)
+        cost = sum(e["message"]["usage"]["cost"]["total"] for e in turn_ends)
         usage = TokenUsage(
-            input_tokens=u["input"],
-            output_tokens=u["output"],
-            cache_read=u["cacheRead"],
-            cache_write=u["cacheWrite"],
-            total_tokens=u["totalTokens"],
-            cost_usd=u["cost"]["total"],
+            input_tokens=inp,
+            output_tokens=out,
+            cache_read=c_read,
+            cache_write=c_write,
+            total_tokens=inp + out + c_read + c_write,
+            cost_usd=cost,
         )
+        # Antworttext aus dem letzten turn_end
+        last_msg = turn_ends[-1]["message"]
         response = "\n".join(
-            c.get("text", "") for c in msg["content"] if c.get("type") == "text"
+            c.get("text", "") for c in last_msg["content"] if c.get("type") == "text"
         ).strip()
+        if diff:
+            response = (response + "\n\n---\n**git diff:**\n```diff\n" + diff + "\n```").strip()
 
-    if not error and not response and not turn_end:
+    if not error and not response and not turn_ends:
         error = "Keine turn_end-Daten in Pi-Ausgabe gefunden"
 
     return RunResult(
@@ -165,15 +211,31 @@ def run_claude(task: Task, model: Model) -> RunResult:
         "-p", task.prompt,
         "--output-format", "json",
         "--model", model.cc_model,
-        "--allow-dangerously-skip-permissions",  # keine interaktiven Nachfragen
+        "--allow-dangerously-skip-permissions",
     ]
 
-    # Leeres Sandbox-Verzeichnis -> Claude entdeckt keine AGENTS.md/CLAUDE.md (Blank-Lauf)
-    with tempfile.TemporaryDirectory(prefix="benchmark-cc-") as sandbox:
-        stdout, stderr, timed_out = _run_process(cmd, timeout_s=180, cwd=sandbox)
-    duration_ms = int((time.time() - start) * 1000)
-
-    error = "Claude-Run nach 180s abgebrochen (Timeout)" if timed_out else None
+    if task.repo_dir:
+        # Echtes Repo: pruefen ob vorhanden, dann direkt darin laufen
+        if not os.path.isdir(task.repo_dir):
+            return RunResult(
+                harness="claude-code", model_label=model.label, task_id=task.id,
+                task_complexity=task.complexity, task_prompt=task.prompt,
+                duration_ms=0, usage=TokenUsage(), response="",
+                timestamp=timestamp,
+                error=f"repo_dir nicht gefunden: {task.repo_dir}",
+            )
+        stdout, stderr, timed_out = _run_process(cmd, timeout_s=TIMEOUT_REPO, cwd=task.repo_dir)
+        diff = _git_diff(task.repo_dir)
+        duration_ms = int((time.time() - start) * 1000)
+        error = f"Claude-Run nach {TIMEOUT_REPO}s abgebrochen (Timeout)" if timed_out else None
+    else:
+        # Leeres Sandbox-Verzeichnis (Standard)
+        timeout = TIMEOUT_SANDBOX_TOOLS if task.use_tools else TIMEOUT_SANDBOX
+        with tempfile.TemporaryDirectory(prefix="benchmark-cc-") as sandbox:
+            stdout, stderr, timed_out = _run_process(cmd, timeout_s=timeout, cwd=sandbox)
+        diff = ""
+        duration_ms = int((time.time() - start) * 1000)
+        error = f"Claude-Run nach {timeout}s abgebrochen (Timeout)" if timed_out else None
 
     usage = TokenUsage()
     response = ""
@@ -197,6 +259,8 @@ def run_claude(task: Task, model: Model) -> RunResult:
                 cost_usd=parsed["total_cost_usd"],
             )
             response = parsed.get("result", "")
+            if diff:
+                response = (response + "\n\n---\n**git diff:**\n```diff\n" + diff + "\n```").strip()
             if parsed.get("is_error") or parsed.get("subtype") != "success":
                 error = f"Claude Code Fehler: {parsed.get('result')}"
         except (json.JSONDecodeError, KeyError) as e:

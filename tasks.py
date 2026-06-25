@@ -6,6 +6,11 @@ ohne Projektkontext eine gueltige Antwort liefern.
 
   use_tools=False -> Modell soll aus Wissen antworten
   use_tools=True  -> Modell soll Shell-/Datei-Tools benutzen
+
+Fuer echte Projektaufgaben (complexity="real"):
+  repo_dir -> Pfad zum echten Repo; Harness laeuft direkt darin (kein Sandbox-
+              Kopieren). Nach jedem Run wird das Repo per `git restore .`
+              zurueckgesetzt. Fehlt das Verzeichnis, wird die Task uebersprungen.
 """
 
 from dataclasses import dataclass
@@ -14,10 +19,13 @@ from dataclasses import dataclass
 @dataclass
 class Task:
     id: str
-    complexity: str  # "trivial" | "simple" | "medium" | "complex"
+    complexity: str  # "baseline" | "trivial" | "simple" | "medium" | "complex" | "real"
     description: str
     prompt: str
     use_tools: bool
+    # Optionales echtes Repo-Verzeichnis (nur fuer complexity="real").
+    # Wenn gesetzt: kein leeres Sandbox-Verzeichnis, sondern direkt das Repo.
+    repo_dir: str | None = None
 
 
 TASKS: list[Task] = [
@@ -135,5 +143,34 @@ TASKS: list[Task] = [
             "answer under 300 words."
         ),
         use_tools=False,
+    ),
+
+    # --- Real (echtes Projekt) ---------------------------------------------
+    # Vier echte JavaFX-UI-Bugs aus dem Datensicherungsprojekt (tokentestbranch).
+    # repo_dir: Harness laeuft direkt im Repo, kein Sandbox-Kopieren.
+    # Kein Auto-Reset nach dem Run -- Nutzer prueft die UI-Aenderungen visuell,
+    # dann manuell zuruecksetzen (git restore . oder UI-Button).
+    Task(
+        id="real-javafx-ui-fixes",
+        complexity="real",
+        description="4 echte JavaFX UI-Bugs im Datensicherungsprojekt fixen (Tools)",
+        prompt=(
+            "You are working on a JavaFX desktop application (Java, Maven project).\n"
+            "Find and fix the following 4 UI bugs. The full source code is in your working directory.\n"
+            "Use your tools to locate the relevant files, read them, and edit them directly.\n"
+            "After all changes, output a short summary of what you changed in each file.\n\n"
+            "Bug 1: The connection settings window (Verbindungsinformationen) is not resizable. "
+            "Make it resizable.\n\n"
+            "Bug 2: The back button (\"Zur\u00fcck\") in the restore detail view has no padding. "
+            "Add appropriate padding (e.g. 8px on all sides).\n\n"
+            "Bug 3: In the time field component used in job settings, hours, minutes and seconds "
+            "are not always formatted with two digits (e.g. \"9\" instead of \"09\") when the "
+            "timeProperty value changes. Fix the formatting for all three fields.\n\n"
+            "Bug 4: The job overview list has no fixed column widths, so the layout shifts "
+            "depending on content. Add fixed preferred widths to the main content sections "
+            "(info, date, duration, stats) so the layout looks table-like and stable."
+        ),
+        use_tools=True,
+        repo_dir="/mnt/c/daten/datensicherung",
     ),
 ]

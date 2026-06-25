@@ -14,6 +14,13 @@ Claude Code hat ~**7–9,5× mehr System-Prompt-Overhead** (Tokens) und ~**4–5
 pro Anfrage – bei identischer Antwortqualität. Token-Faktor > Kosten-Faktor weil CCs Overhead
 großteils aus billigem `cache_read` (0,10×) besteht. Rohdaten: `docs/evidence/`.
 ADR Pi-Caching-Modellabhängigkeit: `docs/adr/0001-pi-caching-modellabhaengig.md`.
+ADR Pi-Turn-Summierung (Tool-Runs): `docs/adr/0002-pi-turn-end-summierung.md`.
+
+**Real-Task-Qualitätsvergleich** (2026-06-25, echtes JavaFX-Repo, visuell bewertet):
+Bei unpräzisem Prompt liefern beide Harnesses ähnlich unvollständige Fixes –
+bei drastisch unterschiedlichen Token-Zahlen und Laufzeiten. Details:
+`docs/quality-eval/2026-06-25-real-task-ergebnisse.md` und
+`docs/quality-eval/2026-06-25-technische-erkenntnisse.md`.
 
 ## Sprache
 Mit dem Nutzer immer **auf Deutsch** kommunizieren. Code-Kommentare ebenfalls
@@ -71,6 +78,20 @@ geschrieben (reine Standardbibliothek, keine Abhängigkeiten).
   Arbeitsverzeichnis (`tempfile.TemporaryDirectory`, `cwd=`). Sonst entdeckt
   v.a. Claude Code projekteigene `AGENTS.md`/`CLAUDE.md` und schnüffelt per Tools
   herum. `--no-context-files` allein reicht NICHT (verhindert nur Auto-Laden).
+- **Real-Tasks (`complexity="real"`):** Harness läuft direkt im echten Repo
+  (`task.repo_dir`). Kein Auto-Reset – Nutzer prüft UI-Änderungen visuell, dann
+  Reset per UI-Button (`/api/reset-repo`, preserviert `gdi-datensicherung.json`)
+  oder `git restore .`. Timeout: 600s. `git diff` wird nach dem Run erfasst und
+  an die Antwort angehängt.
+- **Pi turn_end-Summierung (KRITISCH):** Pi meldet Token **pro Turn**, nicht
+  kumulativ. Bei Tool-Runs alle `turn_end`-Events summieren (ADR-0002).
+  Nur das letzte `turn_end` zu lesen liefert falsche (zu niedrige) Zahlen.
+- **Pi `input`-Feld bei Tool-Runs:** ≈ 1–3 Token pro Turn (Nachrichten-Boundary),
+  weil Pi auch den User-Prompt in `cacheWrite` packt. `input` ist kein
+  verlässlicher Vergleichswert – `total_tokens` verwenden (ADR-0002).
+- **Sofort-Speicherung:** `core.py` schreibt Suite-JSON nach **jedem Einzel-
+  ergebnis** auf Disk (nicht erst am Ende). Verhindert Datenverlust bei
+  Verbindungsabbruch.
 - **Pi-Flags:** `-p --mode json --no-session --no-context-files --no-prompt-templates --thinking off --model <id>`
 - **Claude-Flags:** `-p --output-format json --model <alias> --allow-dangerously-skip-permissions`
   (kein `--bare`, weil das nur API-Key-Login erlaubt; Nutzer hat nur OAuth.)
@@ -121,6 +142,10 @@ python3 report.py        # Bericht aus neuestem Lauf (inkl. Qualität, falls bew
 - ~~LLM-as-judge~~ ✅ erledigt (`judge.py`, UI-Button, Report-Abschnitt)
 - ~~Token-Breakdown~~ ✅ erledigt (UI + Report, alle Felder einzeln, 2026-06-25)
 - ~~Sonnet-ID-Fix~~ ✅ erledigt (`claude-sonnet-4-6`, 2026-06-25)
+- ~~Real-Task-Infrastruktur~~ ✅ erledigt (`repo_dir`, Reset-Button, git diff, 2026-06-25)
+- ~~turn_end-Parser-Fix~~ ✅ erledigt (ADR-0002, 2026-06-25)
+- **Real-Task-Runs abschließen:** Pi Opus (Re-Run) + alle 3 CC-Modelle noch
+  offen. Qualitätsdoku: `docs/quality-eval/2026-06-25-real-task-ergebnisse.md`.
 - **Phase E (Referenzlauf n=10):** alle Tasks, alle 3 Modelle, n=10 → `docs/evidence/`
   (Plan: `docs/plans/2026-06-25-token-breakdown-n10.md`)
 - **Phase F (Quellen):** Anthropic-Docs belegen (Cache-TTL für Claude-4 verifizieren),
