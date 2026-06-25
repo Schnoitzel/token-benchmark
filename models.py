@@ -23,6 +23,6 @@ class Model:
 
 MODELS: list[Model] = [
     Model(label="Haiku 4.5",  pi_model="claude-haiku-4-5",  cc_model="haiku",  tier="cheap"),
-    Model(label="Sonnet 4.6", pi_model="claude-sonnet-4-5", cc_model="sonnet", tier="mid"),
+    Model(label="Sonnet 4.6", pi_model="claude-sonnet-4-6", cc_model="sonnet", tier="mid"),  # ID verifiziert 2026-06-25 via `pi --list-models`
     Model(label="Opus 4.8",   pi_model="claude-opus-4-8",   cc_model="opus",   tier="expensive"),
 ]
