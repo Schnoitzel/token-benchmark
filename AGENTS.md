@@ -10,9 +10,10 @@ Zusätzlich wird die **Antwortqualität** verglichen (Antworten beider Harnesses
 werden nebeneinander gespeichert).
 
 ## Kernergebnis (bisher gemessen)
-Claude Code hat ~**10× mehr System-Prompt-Overhead** und ~**10–16× höhere Kosten**
-pro Anfrage – bei identischer Antwortqualität. Ursache: großer System-Prompt +
-Tool-Definitionen, die bei jeder Anfrage geladen werden (sichtbar in `cache`-Tokens).
+Claude Code hat ~**7–9,5× mehr System-Prompt-Overhead** (Tokens) und ~**4–5× höhere Kosten**
+pro Anfrage – bei identischer Antwortqualität. Token-Faktor > Kosten-Faktor weil CCs Overhead
+großteils aus billigem `cache_read` (0,10×) besteht. Rohdaten: `docs/evidence/`.
+ADR Pi-Caching-Modellabhängigkeit: `docs/adr/0001-pi-caching-modellabhaengig.md`.
 
 ## Sprache
 Mit dem Nutzer immer **auf Deutsch** kommunizieren. Code-Kommentare ebenfalls
@@ -38,6 +39,7 @@ geschrieben (reine Standardbibliothek, keine Abhängigkeiten).
 | `docs/methodik.md` | Erhebungsmethode + verifizierte Cache-Semantik (Referenz hinter den Zahlen) |
 | `docs/evidence/` | versionierte Referenzläufe (JSON+Report) als zitierfähige Belege |
 | `docs/plans/` | Feature-Workflow-Pläne (Single Source of Truth für den Fortschritt) |
+| `docs/adr/` | Architecture Decision Records (harte Entscheidungen + Befunde mit Datum) |
 | `.github/workflows/tests.yml` | CI: fährt Unit-Tests bei Push/PR (keine Live-Kosten) |
 | `results/` | JSON-Rohdaten + Markdown-Berichte (auto, gitignored) |
 
@@ -49,11 +51,15 @@ geschrieben (reine Standardbibliothek, keine Abhängigkeiten).
 - **`/api/config`** liefert auch `pricing` (Preise + Cache-Faktoren) → UI hat
   KEINE hartkodierten Preise mehr (siehe `server.build_config`).
 - **UI** (`static/index.html`): Theme-Umschalter (dunkel/hell, localStorage),
-  „Präsentieren"-Slide (3 Kernzahlen), Drill-down „Wie erhoben?", Provenienz-Panel.
-  Offen (Version 2): Export/Druck, Multi-Slides, erweiterte Live-Robustheit.
-- **Verifizierte Kernzahl:** Overhead = `input+cache_read+cache_write`; Pi ohne
-  Caching (~3,1k), CC mit Prompt-Cache (~27–29k) → ~7–9,5× Token, ~5× Kosten,
-  Qualität ≈ gleich. Details: `docs/methodik.md`.
+  „Präsentieren“-Slide (3 Kernzahlen), Drill-down „Wie erhoben?“, Provenienz-Panel.
+  Token-Breakdown: alle Felder einzeln (input / cache↑write / cache↓read / output /
+  Overhead / Total), Tooltips auf jeder Spalte, Kosten-Breakdown im Drill-down,
+  5-Min-Cache-Callout. Offen (Version 2): Multi-Slides.
+- **Verifizierte Kernzahl:** Overhead = `input+cache_read+cache_write`; Pi Haiku
+  ohne Caching (~3,1k), Pi Sonnet/Opus mit Caching (ebenfalls ~3,1k Overhead,
+  aber kalt/warm-Kostenvariation ~2,3×); CC mit Prompt-Cache (~27–29k) → ~7–9,5×
+  Token, ~4–5× Kosten, Qualität ≈ gleich. Details: `docs/methodik.md`,
+  ADR: `docs/adr/0001-pi-caching-modellabhaengig.md`.
 - **Workflow:** Feature-Workflow-Skill; Implementierung via Subagenten
   (`worker`), Health-Checks `architect`/`overseer` alle ~3 Schritte + Phasenende,
   `reviewer` am Phasenende. Plan-Ticks als eigene Commits, Red→Green sichtbar.
@@ -71,10 +77,15 @@ geschrieben (reine Standardbibliothek, keine Abhängigkeiten).
 - **Token-Felder:** `cache_write` = System-Prompt beim 1. Aufruf, `cache_read` =
   gecacht bei Folgeaufrufen. `cache`-Summe = Overhead-Metrik.
 - **Baseline-Overhead** (`baseline-overhead`-Task): Trivial-Prompt → `input+cache`
-  ist praktisch nur System-Prompt + Tools. Gemessen: ~2,4k (Pi) vs ~29k (CC) = **~12×**.
+  ist praktisch nur System-Prompt + Tools. Gemessen: ~3,1k (Pi) vs ~27–29k (CC)
+  = **~7–9,5×** (modellabhängig). Siehe `docs/evidence/` für Rohdaten.
+- **Pi-Caching modellabhängig:** Haiku 4.5 kein Cache (overhead = input only);
+  Sonnet 4.6 + Opus 4.8 aktivieren server-seitiges Caching ab run#1 (overhead
+  stabil, Kosten kalt/warm ~2,3×). ADR: `docs/adr/0001`.
 - **Kosten einheitlich:** `pricing.py` rechnet die Kosten für BEIDE aus den Tokens
   (eine Anthropic-Preisliste). Harness-Eigenangabe bleibt als `cost_harness_usd`.
-  Wichtig: Overhead ~12× Tokens, aber Kosten nur ~5× (CC-Overhead ist billiger `cache_read`).
+  Wichtig: Overhead ~7–9,5× Tokens, aber Kosten nur ~4–5× (CC-Overhead ist billiger
+  `cache_read`).
 - **Wiederholungen:** `repeat` (UI-Feld / `--repeat`). Report zeigt Median + min–max + n.
 - **Provenienz:** Suite-JSON enthält `provenance` (Versionen, Flags, Preise, Plattform).
 - **Qualität:** `judge.py` (Opus als Richter; bewertet er Opus-Antworten → Sonnet).
@@ -90,7 +101,7 @@ geschrieben (reine Standardbibliothek, keine Abhängigkeiten).
 | Label | Pi (`--model`) | Claude Code (`--model`) |
 |-------|----------------|-------------------------|
 | Haiku 4.5 | `claude-haiku-4-5` | `haiku` |
-| Sonnet 4.6 | `claude-sonnet-4-5` | `sonnet` |
+| Sonnet 4.6 | `claude-sonnet-4-6` | `sonnet` |  <!-- korrigiert 2026-06-25, war 4-5 -->
 | Opus 4.8 | `claude-opus-4-8` | `opus` |
 
 ## Bedienung
@@ -108,9 +119,12 @@ python3 report.py        # Bericht aus neuestem Lauf (inkl. Qualität, falls bew
 
 ## Mögliche nächste Schritte (offen)
 - ~~LLM-as-judge~~ ✅ erledigt (`judge.py`, UI-Button, Report-Abschnitt)
-- Export-Button (Markdown/PDF) bzw. Präsentations-Modus in der UI
+- ~~Token-Breakdown~~ ✅ erledigt (UI + Report, alle Felder einzeln, 2026-06-25)
+- ~~Sonnet-ID-Fix~~ ✅ erledigt (`claude-sonnet-4-6`, 2026-06-25)
+- **Phase E (Referenzlauf n=10):** alle Tasks, alle 3 Modelle, n=10 → `docs/evidence/`
+  (Plan: `docs/plans/2026-06-25-token-breakdown-n10.md`)
+- **Phase F (Quellen):** Anthropic-Docs belegen (Cache-TTL für Claude-4 verifizieren),
+  Inferenzen kennzeichnen (Plan Phase F, selber Plan)
+- Multi-Slides im Präsentationsmodus
 - Mehr/billigere Modelle in `models.py` ergänzen
 - Bei Preisänderungen `pricing.py` aktualisieren (Stand: Juni 2026)
-- UI-Aggregation über Wiederholungen (KPI-Tabelle summiert aktuell über alle
-  Läufe; Verhältnisse stimmen, Absolutwerte sind n×. Der Markdown-Report
-  aggregiert dagegen korrekt per Median – für belastbare Zahlen den Report nutzen.)
