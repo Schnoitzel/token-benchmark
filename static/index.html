@@ -1026,25 +1026,60 @@ function renderResults(suite) {
     }
   }
 
+  // Overhead und separate Cache-Felder berechnen
+  let piCacheWriteTok, piCacheReadTok, ccCacheWriteTok, ccCacheReadTok, piOverhead, ccOverhead;
+  if (useAggregates) {
+    const baselineAggs = suite.aggregates.filter(a => a.task_complexity === 'baseline');
+    const aggs = baselineAggs.length > 0 ? baselineAggs : suite.aggregates;
+    const piAggs = aggs.filter(a => a.harness === 'pi');
+    const ccAggs = aggs.filter(a => a.harness === 'claude-code');
+    
+    const getMetric = (arr, metric) => {
+      if (!arr.length) return 0;
+      const sum = arr.reduce((s, a) => s + (a.metrics[metric] ? a.metrics[metric].median : 0), 0);
+      return sum / arr.length;
+    };
+    
+    piCacheWriteTok = getMetric(piAggs, 'cache_write');
+    piCacheReadTok = getMetric(piAggs, 'cache_read');
+    ccCacheWriteTok = getMetric(ccAggs, 'cache_write');
+    ccCacheReadTok = getMetric(ccAggs, 'cache_read');
+    piOverhead = getMetric(piAggs, 'overhead');
+    ccOverhead = getMetric(ccAggs, 'overhead');
+  } else {
+    piCacheWriteTok = sum(pi, r => r.usage.cache_write);
+    piCacheReadTok = sum(pi, r => r.usage.cache_read);
+    ccCacheWriteTok = sum(cc, r => r.usage.cache_write);
+    ccCacheReadTok = sum(cc, r => r.usage.cache_read);
+    piOverhead = piInputTok + piCacheWriteTok + piCacheReadTok;
+    ccOverhead = ccInputTok + ccCacheWriteTok + ccCacheReadTok;
+  }
+
+  const overheadFactor = piOverhead ? (ccOverhead / piOverhead) : 0;
+
   const kpis = document.getElementById('kpis');
   kpis.innerHTML = `
   <div class="cmp-wrap"><table class="cmp">
     <thead><tr>
       <th></th>
-      <th>Input-Tokens${rangeInfo}</th>
-      <th>Cache-Tokens${rangeInfo}</th>
-      <th>Output-Tokens${rangeInfo}</th>
-      <th>Total${rangeInfo}</th>
-      <th title="Rohtokens umgerechnet in Input-Token-Äquivalente via Preis-Faktoren">Gewichtet ☆${rangeInfo}</th>
-      <th>Kosten${rangeInfo}</th>
+      <th title="Nicht-gecachte Eingabe-Tokens (User-Nachricht + ungecachter System-Prompt). Preis: 1,00×">Input <span style="opacity:0.6">ℹ</span>${rangeInfo}</th>
+      <th title="System-Prompt wird erstmalig in den 5-Minuten-Cache geschrieben. Preis: 1,25× (teurer als Input). Passiert beim ersten Aufruf oder nach >5 Min Pause.">cache↑ write <span style="opacity:0.6">ℹ</span>${rangeInfo}</th>
+      <th title="System-Prompt aus dem Cache gelesen (innerhalb 5 Min). Preis: 0,10× (sehr günstig). CC: stabiler Kern ~21.500 Tokens immer cache_read.">cache↓ read <span style="opacity:0.6">ℹ</span>${rangeInfo}</th>
+      <th title="Vom Modell generierte Antwort-Tokens. Preis: 5,00× (teuerste Kategorie).">Output <span style="opacity:0.6">ℹ</span>${rangeInfo}</th>
+      <th title="= input + cache_write + cache_read. Gesamter mitgeschickter Kontext pro Aufruf (ohne Antwort). Das ist die Kernkennzahl: Pi ~3.069, CC ~29.294 = 9,5×">Overhead <span style="opacity:0.6">ℹ</span>${rangeInfo}</th>
+      <th title="= Overhead + output. Alle Tokens des Aufrufs.">Total <span style="opacity:0.6">ℹ</span>${rangeInfo}</th>
+      <th title="Rohtokens umgerechnet in Input-Token-Äquivalente via Preis-Faktoren">Gewichtet ☆ <span style="opacity:0.6">ℹ</span>${rangeInfo}</th>
+      <th title="Einheitlich berechnet aus einer Preistabelle (pricing.py) für beide Harnesses.">Kosten <span style="opacity:0.6">ℹ</span>${rangeInfo}</th>
       <th>Ø Dauer${rangeInfo}</th>
     </tr></thead>
     <tbody>
       <tr>
         <td><span class="harness-label"><span class="dot pi"></span> Pi</span></td>
         <td>${cell(piInputTok,  ccInputTok,  fmtN, true, true)}</td>
-        <td>${cell(piCacheTok,  ccCacheTok,  fmtN, true, true)}</td>
+        <td>${cell(piCacheWriteTok, ccCacheWriteTok, fmtN, true, true)}</td>
+        <td>${cell(piCacheReadTok, ccCacheReadTok, fmtN, true, true)}</td>
         <td>${cell(piOutTok,    ccOutTok,    fmtN, true, true)}</td>
+        <td>${cell(piOverhead,  ccOverhead,  fmtN)}</td>
         <td>${cell(piTok,       ccTok,       fmtN, true, true)}</td>
         <td>${cell(piWtTok,     ccWtTok,     fmtN)}</td>
         <td>${cellCost(piCost,  ccCost)}</td>
@@ -1053,12 +1088,26 @@ function renderResults(suite) {
       <tr>
         <td><span class="harness-label"><span class="dot cc"></span> Claude Code</span></td>
         <td>${cell(ccInputTok,  piInputTok,  fmtN, true, true)}</td>
-        <td>${cell(ccCacheTok,  piCacheTok,  fmtN, true, true)}</td>
+        <td>${cell(ccCacheWriteTok, piCacheWriteTok, fmtN, true, true)}</td>
+        <td>${cell(ccCacheReadTok, piCacheReadTok, fmtN, true, true)}</td>
         <td>${cell(ccOutTok,    piOutTok,    fmtN, true, true)}</td>
+        <td>${cell(ccOverhead,  piOverhead,  fmtN)}</td>
         <td>${cell(ccTok,       piTok,       fmtN, true, true)}</td>
         <td>${cell(ccWtTok,     piWtTok,     fmtN)}</td>
         <td>${cellCost(ccCost,  piCost)}</td>
-        <td>${cellDur(ccDurAvg, piDurAvg)}
+        <td>${cellDur(ccDurAvg, piDurAvg)}</td>
+      </tr>
+      <tr style="border-top:2px solid var(--border);font-weight:600">
+        <td>Faktor</td>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="val" style="color:var(--warn)">${overheadFactor > 0 ? overheadFactor.toFixed(1) + '×' : '—'}</span></td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="val" style="color:var(--warn)">${costFactor > 0 ? costFactor.toFixed(1) + '×' : '—'}</span></td>
+        <td>—</td>
       </tr>
     </tbody>
   </table></div>
@@ -1212,6 +1261,20 @@ function renderDrillDown(suite, W) {
   
   if (!piAggs.length && !ccAggs.length) return '<p style="color:var(--muted);font-size:12px">Keine Daten.</p>';
   
+  // Preise aus CONFIG.pricing oder Defaults
+  let inputPrice = 3.0, outputPrice = 15.0;  // USD per MTok (Haiku-Defaults)
+  const cacheReadMult = W.cacheRead;   // 0.1
+  const cacheWriteMult = W.cacheWrite; // 1.25
+  
+  // Versuche Preise aus Config zu holen (erstes Modell)
+  if (CONFIG.pricing && CONFIG.pricing.models) {
+    const firstModel = Object.keys(CONFIG.pricing.models)[0];
+    if (firstModel && CONFIG.pricing.models[firstModel]) {
+      inputPrice = CONFIG.pricing.models[firstModel].input;
+      outputPrice = CONFIG.pricing.models[firstModel].output;
+    }
+  }
+  
   const renderHarness = (name, aggsArr) => {
     if (!aggsArr.length) return '';
     const a = aggsArr[0];  // Beispiel-Aggregat (alle haben gleiche Struktur)
@@ -1219,29 +1282,88 @@ function renderDrillDown(suite, W) {
     const cr = a.metrics.cache_read ? a.metrics.cache_read.median : 0;
     const cw = a.metrics.cache_write ? a.metrics.cache_write.median : 0;
     const out = a.metrics.output_tokens ? a.metrics.output_tokens.median : 0;
-    const overhead = inp + cr + cw;
+    const overhead = a.metrics.overhead ? a.metrics.overhead.median : (inp + cr + cw);
+    const total = a.metrics.total_tokens ? a.metrics.total_tokens.median : (overhead + out);
     const n = a.n || 1;
     
-    let rangeStr = '';
-    if (a.metrics.overhead) {
-      const m = a.metrics.overhead;
-      rangeStr = ` (${fmtN(m.min)}–${fmtN(m.max)})`;
-    }
+    // Min-Max-Ranges
+    const range = (metric) => {
+      if (!a.metrics[metric]) return '—';
+      const m = a.metrics[metric];
+      if (m.min === m.max) return '';
+      return ` (${fmtN(m.min)}–${fmtN(m.max)})`;
+    };
+    
+    // Kosten-Breakdown berechnen
+    const costInput = (inp / 1000000) * inputPrice;
+    const costCacheRead = (cr / 1000000) * inputPrice * cacheReadMult;
+    const costCacheWrite = (cw / 1000000) * inputPrice * cacheWriteMult;
+    const costOutput = (out / 1000000) * outputPrice;
+    const costTotal = costInput + costCacheRead + costCacheWrite + costOutput;
+    const costOverhead = costInput + costCacheRead + costCacheWrite;
     
     return `
-      <h5>${name} — Overhead${rangeStr}, n=${n}</h5>
-      <div class="drill-row">
-        <div class="drill-item"><div class="drill-label">Input-Tokens</div><div class="drill-value">${fmtN(inp)}</div></div>
-        <div class="drill-item"><div class="drill-label">Cache-Read</div><div class="drill-value">${fmtN(cr)}</div></div>
-        <div class="drill-item"><div class="drill-label">Cache-Write</div><div class="drill-value">${fmtN(cw)}</div></div>
-        <div class="drill-item"><div class="drill-label">Output-Tokens</div><div class="drill-value">${fmtN(out)}</div></div>
+      <h5 style="color:${name==='Pi'?'var(--pi)':'var(--cc)'}">${name} — n=${n}</h5>
+      <div style="overflow-x:auto;margin-bottom:16px">
+        <table style="width:100%;font-size:12px;border-collapse:collapse">
+          <thead style="background:var(--panel);border-bottom:1px solid var(--border)">
+            <tr>
+              <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:11px">Feld</th>
+              <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px">Median</th>
+              <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px">min–max</th>
+              <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px">Kosten-Anteil</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:6px 8px">input</td>
+              <td style="padding:6px 8px;text-align:right;font-weight:600">${fmtN(inp)}</td>
+              <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:11px">${range('input_tokens')}</td>
+              <td style="padding:6px 8px;text-align:right;font-family:ui-monospace,monospace">${fmtCost(costInput)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:6px 8px">cache↑ write</td>
+              <td style="padding:6px 8px;text-align:right;font-weight:600">${fmtN(cw)}</td>
+              <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:11px">${range('cache_write')}</td>
+              <td style="padding:6px 8px;text-align:right;font-family:ui-monospace,monospace">${fmtCost(costCacheWrite)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:6px 8px">cache↓ read</td>
+              <td style="padding:6px 8px;text-align:right;font-weight:600">${fmtN(cr)}</td>
+              <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:11px">${range('cache_read')}</td>
+              <td style="padding:6px 8px;text-align:right;font-family:ui-monospace,monospace">${fmtCost(costCacheRead)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:6px 8px">output</td>
+              <td style="padding:6px 8px;text-align:right;font-weight:600">${fmtN(out)}</td>
+              <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:11px">${range('output_tokens')}</td>
+              <td style="padding:6px 8px;text-align:right;font-family:ui-monospace,monospace">${fmtCost(costOutput)}</td>
+            </tr>
+            <tr style="border-top:2px solid var(--border);font-weight:600">
+              <td style="padding:6px 8px">Overhead</td>
+              <td style="padding:6px 8px;text-align:right">${fmtN(overhead)}</td>
+              <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:11px">${range('overhead')}</td>
+              <td style="padding:6px 8px;text-align:right;font-family:ui-monospace,monospace">${fmtCost(costOverhead)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border);font-weight:600">
+              <td style="padding:6px 8px">Total</td>
+              <td style="padding:6px 8px;text-align:right">${fmtN(total)}</td>
+              <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:11px">${range('total_tokens')}</td>
+              <td style="padding:6px 8px;text-align:right;font-family:ui-monospace,monospace">${fmtCost(costTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <p style="font-size:12px;color:var(--muted);margin:8px 0 0"><b>Formel:</b> Overhead = Input + Cache-Read + Cache-Write = ${fmtN(inp)} + ${fmtN(cr)} + ${fmtN(cw)} = <b>${fmtN(overhead)}</b></p>
     `;
   };
   
   let html = renderHarness('Pi', piAggs);
   html += renderHarness('Claude Code', ccAggs);
+  
+  // 5-Minuten-Cache-Hinweis
+  html += '<div style="background:var(--panel-2);border:1px solid var(--border);border-left:3px solid var(--warn);border-radius:8px;padding:10px 12px;margin-top:14px;font-size:12px;line-height:1.6">';
+  html += '⏱ <b>5-Minuten-Cache:</b> Anthropic cached den System-Prompt für 5 Min. Nach einer längeren Pause → erneuter <code>cache_write</code> (teuer). Im Dauerbetrieb → meist <code>cache_read</code> (günstig). Claude Code hat im Kern ~21.500 Tokens die IMMER aus dem Cache gelesen werden (konstanter Overhead). Pi nutzt meist keinen Cache (Overhead = Input).';
+  html += '</div>';
   
   // Mini-Provenienz
   if (suite.provenance) {
