@@ -53,17 +53,30 @@ und nicht modellspezifisch.
 
 ### Was das bedeutet (wichtig fuer die Ehrlichkeit der Aussage)
 
-1. **Pi nutzt in dieser blank/ephemeren Konfiguration kein Prompt-Caching.**
-   Der System-Prompt wird bei *jeder* Anfrage als reiner `input` geschickt
-   (`cache_read = cache_write = 0`). Pi zahlt seinen Overhead also voll zum
-   Input-Preis — und der ist trotzdem ~10× kleiner als der von Claude Code.
+1. **Pi-Caching ist modellabhaengig** — nicht generell abwesend:
+   - **Haiku 4.5:** Pi schickt den System-Prompt bei *jeder* Anfrage als reinen
+     `input` (`cache_read = cache_write = 0`). Kein server-seitiges Caching.
+   - **Sonnet 4.6 und Opus 4.8:** Pi aktiviert server-seitiges Prompt-Caching.
+     Run #0 (kalt): `cache_write ≈ 3.066–3.784`. Run #1+ (warm, ≤5 Min):
+     `cache_read ≈ 1.870–2.504`, `cache_write ≈ 1.194–1.280`.
+   - **Wichtig:** Der **Token-Overhead** ist in allen Faellen gleich
+     (`input + cache_read + cache_write ≈ 3.069–3.786`) — stabil warm/kalt.
+     Die **Kosten** dagegen schwanken: Pi Sonnet kalt ≈ $0.012, warm ≈ $0.005
+     (Faktor ~2,3×). Fuer den Kosten-Vergleich wird deshalb der Median ueber
+     ≥3 Wiederholungen empfohlen (enthaelt sowohl kalt als auch warm).
 
-2. **Claude Code nutzt server-seitiges Prompt-Caching.** Sein ~29,3k grosser
-   Kontext teilt sich in einen stabil gecachten Anteil (`cache_read ≈ 21.506`,
-   ueber alle Laeufe konstant) und einen pro Anfrage neu geschriebenen Anteil
-   (`cache_write ≈ 7.778`).
+   *(Beobachtung aus Referenzlauf dcf6c6db, Rohdaten in docs/evidence/. Warum
+   Haiku nicht cacht, Sonnet/Opus aber schon: moeglicherweise modellspezifische
+   Cache-Schwellenwerte bei Anthropic. Nicht offiziell dokumentiert.)*
 
-3. **Der Total-Overhead ist unabhaengig vom Cache-Warm/Kalt-Zustand stabil.**
+2. **Claude Code nutzt server-seitiges Prompt-Caching konsistent** ueber alle
+   Modelle. Sein ~27–29k grosser Kontext teilt sich in:
+   - `cache_read ≈ 20.896–21.506` (stabiler Kern, auch bei run#0 bereits
+     gecacht — *Beobachtung:* moeglicherweise Anthropic-seitig persistent
+     fuer CC als offiziellem Tool; nicht offiziell dokumentiert)
+   - `cache_write ≈ 3.856–7.778` (dynamischer Teil, session-spezifisch)
+
+3. **Der Token-Overhead ist unabhaengig vom Cache-Warm/Kalt-Zustand stabil.**
    `input + cache_read + cache_write` lag in einer voellig getrennten frueheren
    Messung (Fixture, andere Sitzung) bei 29.230 und hier bei 29.296 — Differenz
    < 0,3 %. Das ist die belastbarste Form der Kennzahl: Sie misst den **gesamten
@@ -99,3 +112,26 @@ Tokens zeigen den Umfang, Kosten den finanziellen Effekt.
 
 - **Pi:** `-p --mode json --no-session --no-context-files --no-prompt-templates --thinking off --model <id>`
 - **Claude Code:** `-p --output-format json --model <id> --allow-dangerously-skip-permissions`
+
+## Bekannte Einschraenkungen & offene Fragen
+
+- **Cache-TTL fuer Claude-4-Modelle nicht explizit verifiziert.** Die Anthropic-Dokumentation
+  beschreibt 5 Minuten TTL fuer claude-3-Modelle. Fuer Haiku 4.5, Sonnet 4.6, Opus 4.8
+  wird dieselbe TTL angenommen — aus den Messdaten nicht direkt ableitbar (wir messen
+  keinen Zeitverlauf, nur Tokens). *→ Queuelle: docs.anthropic.com/en/docs/build-with-claude/prompt-caching (Phase-F-TODO: verifizieren)*
+
+- **Stabiler CC-Kern (cache_read ~21.500 Tokens) ist Beobachtung, nicht belegte Tatsache.**
+  Dass dieser Anteil bereits beim allerersten Run gecacht ist, koennte auf Anthropic-seitiges
+  Langzeit-Caching fuer Claude Code als eigenem Produkt hindeuten. Nicht offiziell dokumentiert.
+
+- **Pi-Caching-Verhalten bei Sonnet/Opus: Ursache unklar.** Moegliche Erklaerungen:
+  minimale Cache-Token-Schwelle (Haiku-SP knapp darunter), oder modellspezifische
+  Anthropic-Konfiguration. Beobachtung, keine offizielle Erklaerung.
+
+- **`medium-bash`-Task (use_tools=True) eingeschraenkt vergleichbar.** Beide Harnesses
+  schicken Tool-Definitionen mit, aber das Tool-Set ist OS-abhaengig und unterschiedlich
+  gross. Dieser Task eignet sich nicht fuer den reinen Overhead-Vergleich.
+
+*Quellen-Vollbeleg (Phase F) steht aus. Alle Befunde bis dahin: Messdaten in*
+*`docs/evidence/`, Anthropic-Docs unter https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching*
+*und https://www.anthropic.com/pricing*
