@@ -196,7 +196,7 @@ def run_pi(task: Task, model: Model) -> RunResult:
         response=response,
         timestamp=timestamp,
         error=error,
-        raw={"events": len(events), "stderr": stderr[:500]},
+        raw={"events": len(events), "num_turns": len(turn_ends), "stderr": stderr[:500]},
     )
 
 
@@ -206,15 +206,33 @@ def run_claude(task: Task, model: Model) -> RunResult:
     start = time.time()
     timestamp = datetime.now(timezone.utc).isoformat()
 
+    # --settings: explizite Allow-Liste fuer File-Edits.
+    # --allow-dangerously-skip-permissions allein reicht bei CC >= 2.1.x nicht mehr
+    # fuer Schreibzugriffe auf Dateien ausserhalb des cwd (Windows-Pfad-Problem in WSL).
+    _ALLOW_SETTINGS = '{"permissions":{"allow":["Edit(*)","MultiEdit(*)","Write(*)","Bash(*)"]}}'
+
     cmd = [
         "claude",
         "-p", task.prompt,
         "--output-format", "json",
         "--model", model.cc_model,
         "--allow-dangerously-skip-permissions",
+        "--settings", _ALLOW_SETTINGS,
     ]
 
     if task.repo_dir:
+        # Repo-Verzeichnis als trusted hinzufuegen (WSL-Pfad + Windows-Pfad).
+        cmd.extend(["--add-dir", task.repo_dir])
+        try:
+            import subprocess as _sp
+            win_path = _sp.check_output(
+                ["wslpath", "-m", task.repo_dir], text=True  # -m: forward slashes (C:/...)
+            ).strip()
+            if win_path:
+                cmd.extend(["--add-dir", win_path])
+        except Exception:
+            pass  # wslpath nicht verfuegbar (kein WSL) -> ignorieren
+
         # Echtes Repo: pruefen ob vorhanden, dann direkt darin laufen
         if not os.path.isdir(task.repo_dir):
             return RunResult(

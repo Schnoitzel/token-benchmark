@@ -536,8 +536,9 @@
     <h2>Früheren Lauf ansehen</h2>
     <p style="font-size:14px;color:var(--muted);margin:0 0 16px">Lade die Ergebnisse eines bereits durchgeführten Benchmarks — ohne erneute API-Kosten.</p>
     <div class="controls">
-      <select id="pastRuns"><option value="">— auswählen —</option></select>
+      <select id="pastRuns" onchange="onPastRunChange()"><option value="">— auswählen —</option></select>
       <button class="btn ghost" id="loadPastBtn" onclick="loadPast()">Laden</button>
+      <button class="btn" id="resumeBtn" onclick="resumeRun()" style="display:none">▶ Fortsetzen</button>
       <button class="btn ghost" onclick="refreshPast()">Aktualisieren</button>
     </div>
   </div>
@@ -699,6 +700,7 @@ let allResults = [];
 function lockInputs(lock) {
   document.getElementById('startBtn').disabled = lock;
   document.getElementById('loadPastBtn').disabled = lock;
+  document.getElementById('resumeBtn').disabled = lock;
   document.querySelectorAll('#harnesses input, #models input, #tasks input').forEach(inp => inp.disabled = lock);
   document.getElementById('customPrompt').disabled = lock;
   document.getElementById('customUseTools').disabled = lock;
@@ -1658,18 +1660,24 @@ function openPresent() {
 }
 
 // --- Frühere Läufe ---------------------------------------------------------
+
+// Metadaten der geladenen Läufe (run_id -> {is_complete, total, ...})
+let _pastRunsMeta = {};
+
 async function refreshPast() {
   const r = await fetch('/api/results');
   const items = await r.json();
+  _pastRunsMeta = {};
   const sel = document.getElementById('pastRuns');
   sel.innerHTML = '<option value="">— auswählen —</option>';
   items.forEach(it => {
+    _pastRunsMeta[it.run_id] = it;
     const d = it.started_at ? new Date(it.started_at).toLocaleString('de-DE') : '';
 
     // Was wurde getestet? Aufgaben (oder eigener Prompt), Harnesses, Modelle.
     let was;
     if (it.custom_snippet) {
-      was = `Eigener Prompt: „${it.custom_snippet}“`;
+      was = `Eigener Prompt: „${it.custom_snippet}"`;
     } else if (it.task_ids && it.task_ids.length) {
       was = it.task_ids.length <= 3
         ? it.task_ids.join(', ')
@@ -1681,13 +1689,26 @@ async function refreshPast() {
     const hMap = { 'pi': 'Pi', 'claude-code': 'Claude Code' };
     const harn = (it.harnesses || []).map(h => hMap[h] || h).join(' vs ');
     const mdl  = (it.models || []).join(', ');
+    const progress = (it.total && !it.is_complete)
+      ? ` ⏸ ${it.num_results}/${it.total}` : '';
 
     const parts = [was];
     if (harn) parts.push(harn);
     if (mdl)  parts.push(mdl);
     if (d)    parts.push(d);
-    sel.innerHTML += `<option value="${it.run_id}">${parts.join('  ·  ')}</option>`;
+    sel.innerHTML += `<option value="${it.run_id}">${parts.join('  ·  ')}${progress}</option>`;
   });
+  onPastRunChange();
+}
+
+// Zeigt/versteckt den Fortsetzen-Button je nach Auswahl.
+function onPastRunChange() {
+  const runId = document.getElementById('pastRuns').value;
+  const btn = document.getElementById('resumeBtn');
+  const meta = _pastRunsMeta[runId];
+  // Button nur anzeigen wenn: run_id bekannt, run_plan vorhanden (total != null),
+  // noch nicht abgeschlossen.
+  btn.style.display = (meta && meta.total !== null && !meta.is_complete) ? '' : 'none';
 }
 
 // Einen gespeicherten Lauf laden und darstellen.
@@ -1704,6 +1725,52 @@ async function loadPast() {
   } catch (err) {
     showError('Lauf konnte nicht geladen werden: ' + err.message);
   }
+}
+
+// Unterbrochenen Benchmark-Lauf fortsetzen.
+async function resumeRun() {
+  const runId = document.getElementById('pastRuns').value;
+  if (!runId) { showError('Bitte zuerst einen Lauf auswählen.'); return; }
+  const meta = _pastRunsMeta[runId];
+  if (!meta || meta.is_complete) { showError('Dieser Lauf ist bereits abgeschlossen.'); return; }
+  hideError();
+
+  const remaining = meta.total !== null ? meta.total - meta.num_results : '?';
+  if (!confirm(`Lauf ${runId} fortsetzen?\nBereits erledigt: ${meta.num_results} von ${meta.total ?? '?'} Runs.\nNoch ausstehend: ${remaining} Runs.`)) return;
+
+  // Fortsetzen läuft als SSE-Stream – gleicher Mechanismus wie ein neuer Lauf.
+  lockInputs(true);
+  const log = document.getElementById('log');
+  log.innerHTML = '';
+  document.getElementById('pbar').style.width = '0%';
+  document.getElementById('progressCard').style.display = 'block';
+  document.getElementById('progressSub').textContent = 'wird fortgesetzt …';
+  document.getElementById('resultsCard').style.display = 'none';
+
+  const es = new EventSource('/api/resume?run_id=' + encodeURIComponent(runId));
+  es.onmessage = ev => {
+    try {
+      const d = JSON.parse(ev.data);
+      handleEvent(d, log);
+      if (d.type === 'done') {
+        es.close();
+        lockInputs(false);
+        document.getElementById('progressSub').textContent = 'fertig';
+        document.getElementById('resumeBtn').style.display = 'none';
+        refreshPast();
+      }
+    } catch (err) {
+      es.close();
+      lockInputs(false);
+      showError('Fehler beim Fortsetzen: ' + err.message);
+    }
+  };
+  es.onerror = () => {
+    es.close();
+    lockInputs(false);
+    document.getElementById('progressSub').textContent = 'unterbrochen';
+    showError('Verbindung unterbrochen. Fortschritt gespeichert – einfach erneut auf ▶ Fortsetzen klicken.');
+  };
 }
 
 // Tastatur-Navigation für Präsentieren-Overlay

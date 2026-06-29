@@ -40,6 +40,76 @@ def safe_run_id(run_id: str) -> bool:
     return bool(run_id) and _RUN_ID_RE.match(run_id) is not None
 
 
+def build_results_list(results_dir: str) -> list[dict]:
+    """Liest alle benchmark-*.json aus results_dir und gibt eine Liste von
+    Summary-Dicts zurueck. Wird von /api/results und Tests genutzt.
+
+    Jedes Item enthaelt:
+      run_id, started_at, num_results, harnesses, models, task_ids,
+      custom_snippet, is_complete, total
+    """
+    files = sorted(glob.glob(os.path.join(results_dir, "benchmark-*.json")), reverse=True)
+    items = []
+    for fp in files:
+        try:
+            with open(fp, encoding="utf-8") as f:
+                suite = json.load(f)
+            results = suite.get("results", [])
+
+            # Eindeutige Werte in stabiler Reihenfolge sammeln
+            def uniq(key):
+                seen = []
+                for r in results:
+                    v = r.get(key)
+                    if v and v not in seen:
+                        seen.append(v)
+                return seen
+
+            harnesses = uniq("harness")
+            models = uniq("model_label")
+            task_ids = uniq("task_id")
+
+            # Bei eigenem Prompt einen Ausschnitt des Texts zeigen.
+            custom_snippet = None
+            if task_ids == ["custom"]:
+                prompt = next((r.get("task_prompt", "") for r in results), "")
+                flat = " ".join(prompt.split())
+                limit = 80
+                if len(flat) > limit:
+                    cut = flat[:limit]
+                    last_space = cut.rfind(" ")
+                    if last_space > 40:
+                        cut = cut[:last_space]
+                    custom_snippet = cut.rstrip() + "…"
+                else:
+                    custom_snippet = flat
+
+            # Vollstaendigkeitspruefung: run_plan.total vs. tatsaechliche Results
+            run_plan = suite.get("run_plan", {})
+            total = run_plan.get("total")  # None wenn kein run_plan (aeltere JSONs)
+            finished_at = suite.get("finished_at")
+            if total is not None:
+                is_complete = (len(results) >= total) and (finished_at is not None)
+            else:
+                # Aeltere JSONs ohne run_plan: als vollstaendig betrachten
+                is_complete = finished_at is not None
+
+            items.append({
+                "run_id": suite["run_id"],
+                "started_at": suite.get("started_at"),
+                "num_results": len(results),
+                "harnesses": harnesses,
+                "models": models,
+                "task_ids": task_ids,
+                "custom_snippet": custom_snippet,
+                "is_complete": is_complete,
+                "total": total,
+            })
+        except Exception:  # noqa: BLE001
+            pass
+    return items
+
+
 def build_config() -> dict:
     """Konfiguration fuer die UI: Modelle, Tasks UND Preise/Cache-Faktoren.
     Die Preise kommen aus pricing.py (EINE Quelle) - so muss das Frontend nichts
@@ -115,57 +185,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/results":
-            files = sorted(glob.glob(os.path.join(HERE, "results", "benchmark-*.json")), reverse=True)
-            items = []
-            for fp in files:
-                try:
-                    with open(fp, encoding="utf-8") as f:
-                        suite = json.load(f)
-                    results = suite.get("results", [])
-
-                    # Eindeutige Werte in stabiler Reihenfolge sammeln
-                    def uniq(key):
-                        seen = []
-                        for r in results:
-                            v = r.get(key)
-                            if v and v not in seen:
-                                seen.append(v)
-                        return seen
-
-                    harnesses = uniq("harness")
-                    models = uniq("model_label")
-                    task_ids = uniq("task_id")
-
-                    # Bei eigenem Prompt einen Ausschnitt des Texts zeigen.
-                    # Whitespace/Umbrüche zu einzelnen Leerzeichen normalisieren,
-                    # damit mehrzeilige Prompts die Dropdown-Zeile nicht zerschießen.
-                    custom_snippet = None
-                    if task_ids == ["custom"]:
-                        prompt = next((r.get("task_prompt", "") for r in results), "")
-                        flat = " ".join(prompt.split())
-                        limit = 80
-                        if len(flat) > limit:
-                            # Nicht mitten im Wort abschneiden: am letzten Leerzeichen vor dem Limit trennen
-                            cut = flat[:limit]
-                            last_space = cut.rfind(" ")
-                            if last_space > 40:  # nur wenn dadurch nicht zu viel verloren geht
-                                cut = cut[:last_space]
-                            custom_snippet = cut.rstrip() + "…"
-                        else:
-                            custom_snippet = flat
-
-                    items.append({
-                        "run_id": suite["run_id"],
-                        "started_at": suite.get("started_at"),
-                        "num_results": len(results),
-                        "harnesses": harnesses,
-                        "models": models,
-                        "task_ids": task_ids,
-                        "custom_snippet": custom_snippet,
-                    })
-                except Exception:  # noqa: BLE001
-                    pass
-            self._send_json(items)
+            self._send_json(build_results_list(os.path.join(HERE, "results")))
             return
 
         if path == "/api/result":
@@ -194,6 +214,10 @@ class Handler(BaseHTTPRequestHandler):
             self._send_download(md, f"benchmark-{run_id}.md", "text/markdown; charset=utf-8")
             return
 
+        if path == "/api/resume":
+            self._handle_resume_stream(qs)
+            return
+
         if path == "/api/reset-repo":
             self._handle_reset_repo(qs)
             return
@@ -207,6 +231,76 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         self._send_json({"error": "not found"}, status=404)
+
+    # --- Benchmark fortsetzen (Resume) ------------------------------------
+
+    def _handle_resume_stream(self, qs):
+        """Setzt einen unterbrochenen Benchmark-Lauf fort.
+
+        Liest run_plan aus der bestehenden JSON und ruft run_benchmark_iter
+        mit resume_run_id auf. Antwortet als SSE-Stream (identisch /api/run).
+        """
+        run_id = qs.get("run_id", [""])[0]
+        if not run_id or not safe_run_id(run_id):
+            self._send_json({"error": "Ungueltige run_id"}, status=400)
+            return
+
+        fp = os.path.join(HERE, "results", f"benchmark-{run_id}.json")
+        try:
+            with open(fp, encoding="utf-8") as f:
+                suite = json.load(f)
+        except FileNotFoundError:
+            self._send_json({"error": "Lauf nicht gefunden"}, status=404)
+            return
+        except json.JSONDecodeError as e:
+            self._send_json({"error": f"JSON-Fehler: {e}"}, status=500)
+            return
+
+        run_plan = suite.get("run_plan")
+        if not run_plan:
+            self._send_json(
+                {"error": "Kein run_plan in der JSON – aeltere Datei kann nicht fortgesetzt werden."},
+                status=400,
+            )
+            return
+
+        # Originalparameter aus run_plan rekonstruieren
+        task_ids = run_plan.get("task_ids", [])
+        model_labels = run_plan.get("model_labels", [])
+        harnesses = run_plan.get("harnesses", [])
+        repeat = run_plan.get("repeat", 1)
+
+        models = filter_models(model_labels)
+        tasks = filter_tasks(task_ids, complexity=None)
+
+        if not models or not tasks or not harnesses:
+            self._send_json({"error": "Konnte Parameter nicht rekonstruieren"}, status=400)
+            return
+
+        # SSE-Header
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.end_headers()
+
+        def send_event(obj):
+            data = "data: " + json.dumps(obj, ensure_ascii=False) + "\n\n"
+            self.wfile.write(data.encode("utf-8"))
+            self.wfile.flush()
+
+        try:
+            for event in run_benchmark_iter(
+                harnesses=harnesses,
+                models=models,
+                tasks=tasks,
+                delay=2.0,
+                repeat=repeat,
+                resume_run_id=run_id,
+            ):
+                send_event(event)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     # --- Repo-Reset --------------------------------------------------------
 

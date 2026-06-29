@@ -127,17 +127,81 @@ Der Code-Fix (`setResizable(true)`) war bei allen 3 identisch. Bei Haiku/Sonnet 
 ---
 
 ## Run 4 — Claude Code · Haiku 4.5
-*(ausstehend)*
+
+**Token-Nutzung:**
+| Feld | Wert |
+|------|------|
+| input | 106 |
+| cache_write | 25.119 |
+| cache_read | 573.640 |
+| output | 6.129 |
+| **total** | **604.994** |
+| Kosten | $0.1195 |
+| Dauer | 61,4 s |
+| Turns | 19 |
+
+**Visuelle Bewertung durch Nutzer:**
+
+| Bug | Ergebnis | Anmerkung |
+|-----|---------|----------|
+| 1 – resizable | ❌ | kein sichtbarer Effekt (Code korrekt, aber visuell nicht resizable) |
+| 2 – padding | ❌ | kein sichtbarer Effekt |
+| 3 – zweistellig | ⚠️ teilweise | Listener korrekt; manuelles Eintippen einstellig weiterhin möglich |
+| 4 – tabellarisch | ⚠️ teilweise | Text abgeschnitten, nicht aligned |
+
+**Gesamtbewertung CC / Haiku:** 0 von 4 Bugs vollständig behoben · 2 teilweise · 2 ohne sichtbaren Effekt
+
+**Seiteneffekte:** keine CRLF-Konvertierung (sauber)
 
 ---
 
 ## Run 5 — Claude Code · Sonnet 4.6
-*(ausstehend)*
+
+**Token-Nutzung:**
+| Feld | Wert |
+|------|------|
+| **total** | **212.766** |
+| Kosten | $0.2187 |
+| Dauer | 137,5 s |
+| Turns | 13 |
+
+**Visuelle Bewertung durch Nutzer:**
+
+| Bug | Ergebnis | Anmerkung |
+|-----|---------|----------|
+| 1 – resizable | ❌ | kein sichtbarer Effekt |
+| 2 – padding | ❌ | kein sichtbarer Effekt |
+| 3 – zweistellig | ⚠️ teilweise | |
+| 4 – tabellarisch | ⚠️ teilweise | |
+
+**Gesamtbewertung CC / Sonnet:** 0 von 4 Bugs vollständig behoben · 2 teilweise · 2 ohne sichtbaren Effekt
 
 ---
 
 ## Run 6 — Claude Code · Opus 4.8
-*(ausstehend)*
+
+**Token-Nutzung:**
+| Feld | Wert |
+|------|------|
+| input | 4.123 |
+| cache_write | 59.272 |
+| cache_read | 667.393 |
+| output | 5.468 |
+| **total** | **736.256** |
+| Kosten | $2.5844 |
+| Dauer | 96,6 s |
+| Turns | 20 |
+
+**Visuelle Bewertung durch Nutzer:**
+
+| Bug | Ergebnis | Anmerkung |
+|-----|---------|----------|
+| 1 – resizable | ❌ | kein sichtbarer Effekt |
+| 2 – padding | ❌ | kein sichtbarer Effekt |
+| 3 – zweistellig | ⚠️ teilweise | Listener korrekt; manuelles Eintippen einstellig weiterhin möglich |
+| 4 – tabellarisch | ⚠️ teilweise | |
+
+**Gesamtbewertung CC / Opus:** 0 von 4 Bugs vollständig behoben · 2 teilweise · 2 ohne sichtbaren Effekt
 
 ---
 
@@ -179,9 +243,9 @@ Das ist ein erheblicher Qualitätsunterschied — chirurgische Fixes sollten kei
 | Pi | Haiku 4.5 | ✅ | ❌ | ⚠️ | ⚠️ | ⚠️ ~156 Dateien CRLF→LF |
 | Pi | Sonnet 4.6 | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ nicht-deterministisch (Re-Run: CRLF in mehreren Dateien) |
 | Pi | Opus 4.8 | ✅ | ❌ | ⚠️ | ⚠️ | ⚠️ 1 Datei LF neu geschrieben |
-| Claude Code | Haiku 4.5 | | | | | |
-| Claude Code | Sonnet 4.6 | | | | | |
-| Claude Code | Opus 4.8 | | | | | |
+| Claude Code | Haiku 4.5 | ❌ | ❌ | ⚠️ | ⚠️ | keine |
+| Claude Code | Sonnet 4.6 | ❌ | ❌ | ⚠️ | ⚠️ | |
+| Claude Code | Opus 4.8 | ❌ | ❌ | ⚠️ | ⚠️ | keine |
 
 ---
 
@@ -191,7 +255,7 @@ Das ist ein erheblicher Qualitätsunterschied — chirurgische Fixes sollten kei
 |---------|--------|-------------|--------|-------|
 | Pi | Haiku 4.5 | 630.708 | $0.1280 | 78,9s |
 | Pi | Sonnet 4.6 | 222.860 | $0.1901 | 56,0s |
-| Pi | Opus 4.8 | *(fehlt)* | *(fehlt)* | *(fehlt)* |
-| Claude Code | Haiku 4.5 | | | |
-| Claude Code | Sonnet 4.6 | | | |
-| Claude Code | Opus 4.8 | | | |
+| Pi | Opus 4.8 | 246.103 | $1.2215 | 84,7s |
+| Claude Code | Haiku 4.5 | 604.994 | $0.1195 | 61,4s |
+| Claude Code | Sonnet 4.6 | 212.766 | $0.2187 | 137,5s |
+| Claude Code | Opus 4.8 | 736.256 | $2.5844 | 96,6s |
