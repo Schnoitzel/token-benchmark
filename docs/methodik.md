@@ -128,9 +128,13 @@ Tokens zeigen den Umfang, Kosten den finanziellen Effekt.
   minimale Cache-Token-Schwelle (Haiku-SP knapp darunter), oder modellspezifische
   Anthropic-Konfiguration. Beobachtung, keine offizielle Erklaerung.
 
-- **`medium-bash`-Task (use_tools=True) eingeschraenkt vergleichbar.** Beide Harnesses
-  schicken Tool-Definitionen mit, aber das Tool-Set ist OS-abhaengig und unterschiedlich
-  gross. Dieser Task eignet sich nicht fuer den reinen Overhead-Vergleich.
+- **`medium-bash`-Task (use_tools=True): muss environment-symmetrisch sein.**
+  Der urspruengliche Prompt fragte nach `/usr/share/doc` (Linux-Pfad). CC laeuft als
+  Windows-Prozess und fand diesen Pfad nie zuverlaessig (CC Opus: 0/10 Erfolge,
+  CC Sonnet: Overhead-Streuung 116k–396k Tokens). Der Task wurde durch eine
+  environment-agnostische Systeminfo-Aufgabe ersetzt (ADR-0003, 2026-06-29).
+  Lernprinzip: Tool-Tasks muessen auf environment-Symmetrie geprueft werden bevor
+  Ergebnisse als Overhead-Vergleich gewertet werden.
 
 *Quellen-Vollbeleg (Phase F) steht aus. Alle Befunde bis dahin: Messdaten in*
 *`docs/evidence/`, Anthropic-Docs unter https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching*

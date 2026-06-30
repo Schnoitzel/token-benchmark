@@ -98,11 +98,18 @@ TASKS: list[Task] = [
     Task(
         id="medium-bash",
         complexity="medium",
-        description="Shell-Aufgabe - Tool-Nutzung erwartet",
+        description="Shell-Aufgabe: Systeminfo -- environment-agnostisch (ADR-0003)",
         prompt=(
-            "Using the available shell tools, find the 5 largest files (by size) "
-            "under /usr/share/doc and print their paths and sizes. Then summarise "
-            "what you found in one sentence."
+            "Using your shell tools, gather the following system information and "
+            "present it as a formatted table:\n"
+            "1. Current working directory and current username\n"
+            "2. Operating system name and version\n"
+            "3. Number of available CPU cores\n"
+            "4. Total and free disk space on the main volume\n\n"
+            "Use the appropriate shell commands for your environment "
+            "(Linux/macOS or Windows). "
+            "End with one sentence summarising the most notable aspect of "
+            "this environment."
         ),
         use_tools=True,
     ),
