@@ -346,3 +346,76 @@ class TestIsComplete(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestAtomicSave(unittest.TestCase):
+    """Prueft atomisches Schreiben: alte Datei bleibt bei Absturz erhalten."""
+
+    def _run_one(self, tmp_dir):
+        """Hilfsfunktion: fuehrt einen minimalen Benchmark-Lauf durch."""
+        cwd = os.getcwd()
+        os.chdir(tmp_dir)
+        try:
+            with patch.object(core, "run_pi",
+                              side_effect=lambda t, m: _fake_result("pi", m.label, t.id)), \
+                 patch.object(core, "run_claude",
+                              side_effect=lambda t, m: _fake_result("claude-code", m.label, t.id)), \
+                 patch.object(core, "get_tool_versions",
+                              return_value={"pi": "test", "claude": "test"}):
+                list(core.run_benchmark_iter(
+                    tasks=[TASK], models=[MODEL_A], harnesses=["pi", "claude-code"],
+                    delay=0, repeat=1,
+                ))
+        finally:
+            os.chdir(cwd)
+        # Gibt den Pfad zur erzeugten JSON zurueck (liegt in results/)
+        results_dir = os.path.join(tmp_dir, "results")
+        files = [f for f in os.listdir(results_dir) if f.endswith(".json")]
+        return os.path.join(results_dir, files[0]) if files else None
+
+    def test_tmp_datei_wird_nach_save_geloescht(self):
+        """Nach erfolgreichem Speichern darf keine .tmp-Datei uebrig bleiben."""
+        with tempfile.TemporaryDirectory() as tmp:
+            out_file = self._run_one(tmp)
+            self.assertTrue(os.path.exists(out_file), "JSON muss existieren")
+            self.assertFalse(
+                os.path.exists(out_file + ".tmp"),
+                ".tmp darf nach erfolgreichem Schreiben nicht mehr existieren",
+            )
+
+    def test_alte_datei_bleibt_bei_schreibfehler_erhalten(self):
+        """Wenn der Schreibvorgang abbricht, bleibt die alte JSON unveraendert."""
+        import json as _json
+        with tempfile.TemporaryDirectory() as tmp:
+            # Ersten Lauf abschliessen -> gueltige JSON vorhanden
+            out_file = self._run_one(tmp)
+            with open(out_file) as f:
+                original = f.read()
+            original_count = len(_json.loads(original)["results"])
+
+            # Zweiten Schreibvorgang simulieren der mitten im dump abbricht
+            original_dump = _json.dump
+            call_count = [0]
+
+            def crashing_dump(obj, fp, **kw):
+                call_count[0] += 1
+                # Beim zweiten Aufruf (= naechster _save) absichtlich abbrechen
+                if call_count[0] >= 2:
+                    fp.write('{"broken":')  # absichtlich kaputtes JSON
+                    raise OSError("Simulierter Schreibfehler")
+                return original_dump(obj, fp, **kw)
+
+            with patch("json.dump", side_effect=crashing_dump):
+                try:
+                    self._run_one(tmp)
+                except OSError:
+                    pass  # erwarteter Fehler
+
+            # Alte Datei muss noch lesbar und unveraendert sein
+            with open(out_file) as f:
+                recovered = f.read()
+            recovered_data = _json.loads(recovered)  # darf nicht kaputt sein
+            self.assertEqual(
+                len(recovered_data["results"]), original_count,
+                "Alte JSON muss nach Schreibfehler unveraendert sein",
+            )

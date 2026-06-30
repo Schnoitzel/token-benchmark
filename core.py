@@ -156,9 +156,13 @@ def run_benchmark_iter(
     os.makedirs("results", exist_ok=True)
 
     def _save(finished: bool) -> dict:
-        """Schreibt den aktuellen Stand sofort auf Disk.
-        Wird nach jedem Einzelergebnis aufgerufen, damit bei Verbindungsabbruch
-        keine Daten verloren gehen."""
+        """Schreibt den aktuellen Stand atomar auf Disk.
+
+        Strategie: erst in <out_file>.tmp schreiben, dann per os.replace()
+        atomar umbenennen.  os.replace() ist auf Linux atomar (gleiche
+        Partition) -- die alte Datei bleibt bis zur letzten Millisekunde
+        vollstaendig lesbar.  Kein Datenverlust bei Absturz oder SIGKILL.
+        """
         current_dicts = all_result_dicts + [asdict(r) for r in new_results]
         suite = {
             "run_id": run_id,
@@ -169,8 +173,10 @@ def run_benchmark_iter(
             "results": current_dicts,
             "aggregates": stats.build_aggregates(current_dicts),
         }
-        with open(out_file, "w", encoding="utf-8") as f:
+        tmp_file = out_file + ".tmp"
+        with open(tmp_file, "w", encoding="utf-8") as f:
             json.dump(suite, f, indent=2, ensure_ascii=False)
+        os.replace(tmp_file, out_file)  # atomar: alte Datei bleibt bis hierher intakt
         return suite
 
     for task in tasks:
