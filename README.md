@@ -14,10 +14,10 @@ Beide Harnesses nutzen dieselbe Anthropic API, setzen aber unterschiedlich viele
 | **Pi** | Minimalistisch – nur Kern-Tools, kein Sub-Agent, kein Plan-Mode |
 | **Claude Code** | Feature-reich – voller System-Prompt inkl. MCP, Permissions, Sub-Agents, … |
 
-**Verifiziert gemessen (Haiku 4.5, Baseline, 5 Wiederholungen, Run `3997a0b9`):**
-- Pi: **~3.069 Overhead-Tokens** (System-Prompt als reiner `input`, kein Caching)
-- Claude Code: **~29.296 Overhead-Tokens** (`input` + `cache_read` + `cache_write`)
-- → **≈ 9,5× Token-Overhead** (Kosten-Overhead ~5×, da CC viel billiges `cache_read` nutzt)
+**Verifiziert gemessen (Baseline, n=10 je Kombination, Suite `benchmark-9a72151a`):**
+- Pi: **~3.500 Overhead-Tokens** (Haiku: kein Caching, Sonnet/Opus: server-seitiges Caching)
+- Claude Code: **~29.000 Overhead-Tokens** (`input` + `cache_read` + `cache_write`)
+- → **≈ 8× Token-Overhead** (Kosten-Overhead ~4–5×, da CC-Overhead großteils billiges `cache_read` ist)
 
 Overhead = `input + cache_read + cache_write` (Kontext pro Anfrage ohne Antwort),
 bei beiden hoch reproduzierbar (Streuung < 2 Tokens). Vollstaendige Methodik und
@@ -75,7 +75,10 @@ python3 main.py
 python3 main.py --complexity trivial --models "Sonnet 4.6"
 
 # Nur Pi, Haiku
-python3 main.py --harnesses pi --models "Haiku 3.5"
+python3 main.py --harnesses pi --models "Haiku 4.5"
+
+# Overhead-Kernzahl messen (10 Wiederholungen)
+python3 main.py --complexity baseline --repeat 10
 
 # Report aus vorhandenem Ergebnis erzeugen
 python3 report.py                                  # neuestes
@@ -89,8 +92,10 @@ python3 report.py results/benchmark-abcd1234.json  # bestimmtes
 | `--harnesses` | `pi,claude-code` | Kommagetrennte Harnesses |
 | `--models` | alle | Kommagetrennte Modell-Labels |
 | `--tasks` | alle | Kommagetrennte Task-IDs |
-| `--complexity` | alle | `trivial,simple,medium,complex` |
+| `--complexity` | alle | `baseline,trivial,simple,medium,complex,real,all` |
+| `--repeat` | `1` | Wiederholungen je Kombination |
 | `--delay` | `2.0` | Pause zwischen Runs (Sekunden) |
+| `--output` | auto | Pfad zur Ausgabe-JSON |
 | `--dry-run` | – | Zeigt nur, was laufen würde |
 | `--no-report` | – | Kein Markdown-Report nach dem Run |
 
@@ -101,7 +106,7 @@ Definiert in `models.py` – einfach editieren/ergänzen:
 | Label | Pi Model-ID | CC Alias | Tier |
 |-------|-------------|----------|------|
 | Haiku 4.5 | `claude-haiku-4-5` | `haiku` | cheap |
-| Sonnet 4.6 | `claude-sonnet-4-5` | `sonnet` | mid |
+| Sonnet 4.6 | `claude-sonnet-4-6` | `sonnet` | mid |
 | Opus 4.8 | `claude-opus-4-8` | `opus` | expensive |
 
 ## Tasks
@@ -110,12 +115,13 @@ Definiert in `tasks.py`:
 
 | ID | Komplexität | Tool-Use | Beschreibung |
 |----|-------------|----------|--------------|
+| `baseline-overhead` | baseline | nein | Reiner Harness-Overhead (System-Prompt + Tools) |
 | `trivial-fact` | trivial | nein | Faktenfrage (Berliner Mauer) |
 | `trivial-math` | trivial | nein | 17 × 23 |
 | `simple-code` | simple | nein | TypeScript debounce-Funktion |
 | `simple-explain` | simple | nein | Promise.all vs allSettled |
 | `medium-design` | medium | nein | REST-API Design |
-| `medium-bash` | medium | **ja** | Größte Dateien finden (bash) |
+| `medium-bash` | medium | **ja** | Systeminfo per Shell (OS, CPU, Disk) |
 | `complex-refactor` | complex | nein | Python Code-Review + Refactor |
 | `complex-analysis` | complex | nein | OLTP/OLAP Architektur-Analyse |
 
@@ -145,15 +151,23 @@ Nach jedem Run:
 
 ```
 token-benchmark-py/
-├── server.py        # Web-Server fuer die UI  <- START HIER fuer die Oberflaeche
+├── server.py        # Web-Server fuer die UI  <- START HIER
 ├── static/
 │   └── index.html   # die Web-Oberflaeche (HTML/CSS/JS)
 ├── core.py          # gemeinsame Benchmark-Logik (UI + CLI)
-├── main.py          # CLI-Einstiegspunkt (Kommandozeile)
+├── main.py          # CLI-Einstiegspunkt
 ├── models.py        # Modell-Definitionen
+├── pricing.py       # Preistabelle (eine Quelle fuer beide Harnesses)
 ├── tasks.py         # Task-Definitionen (Prompts)
-├── runners.py       # Pi- und Claude-Code-Runner (parsen JSON-Ausgabe)
+├── runners.py       # Pi- und Claude-Code-Runner
+├── judge.py         # LLM-Richter (blinder Qualitaetsvergleich)
 ├── report.py        # Report-Generator (Markdown)
+├── stats.py         # Streuungsmasse (Median, IQR, ...)
+├── utils.py         # gemeinsame Helfer
+├── docker/          # Container-Setup (faire Messumgebung + Distribution)
+│   ├── README.md
+│   └── run.sh
+├── docs/            # Methodik, ADRs, Plaene, Evidenz, PDFs
 └── results/         # wird automatisch erstellt
 ```
 
