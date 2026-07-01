@@ -5,65 +5,93 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Token-Benchmark · Pi vs Claude Code</title>
 <style>
+  /* Inter Tight – lokal aus fonts/ */
+  @font-face {
+    font-family: 'Inter Tight';
+    src: url('fonts/InterTight-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Inter Tight';
+    src: url('fonts/InterTight-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Inter Tight';
+    src: url('fonts/InterTight-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+  }
+
+  /* SelectLine Group Brand – Hell ist Standard */
   :root {
+    --bg: #ffffff;
+    --panel: #ffffff;
+    --panel-2: #f5f4f4;
+    --border: #e5e5e5;
+    --text: #1f3340;
+    --muted: #6b7a85;
+    --pi: #1f3340;        /* Anthrazit für Pi (hell) */
+    --cc: #ff6c2f;        /* Orange für Claude Code */
+    --good: #2d7a2d;
+    --warn: #b87a00;
+    --warn-bg: #fff3e0;
+    --bad: #96122f;
+    --accent: #ff6c2f;    /* Orange Akzent */
+    --accent-hover: #e85820;
+    --shadow: 0 2px 8px rgba(0,0,0,.08);
+  }
+  /* Dark-Theme (optional) */
+  [data-theme="dark"] {
     --bg: #0f1117;
     --panel: #1a1d27;
     --panel-2: #222633;
     --border: #2c3142;
     --text: #e6e8ee;
     --muted: #9aa0b0;
-    --pi: #34d399;        /* grün */
-    --cc: #f472b6;        /* pink */
+    --pi: #7d93a0;        /* helles Blaugrau für Pi (dunkel) */
+    --cc: #ff6c2f;        /* Orange bleibt */
     --good: #4ade80;
     --warn: #fbbf24;
     --warn-bg: #2d2500;
     --bad: #f87171;
-    --accent: #6366f1;
+    --accent: #ff6c2f;
+    --accent-hover: #e85820;
     --shadow: 0 4px 24px rgba(0,0,0,.35);
-  }
-  [data-theme="light"] {
-    --bg: #f5f7fa;
-    --panel: #ffffff;
-    --panel-2: #f0f2f5;
-    --border: #d1d5db;
-    --text: #1f2937;
-    --muted: #6b7280;
-    --pi: #059669;
-    --cc: #a21caf;
-    --good: #059669;
-    --warn: #d97706;
-    --warn-bg: #fef3c7;
-    --bad: #dc2626;
-    --accent: #4f46e5;
-    --shadow: 0 2px 8px rgba(0,0,0,.08);
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: 'Inter Tight', system-ui, -apple-system, sans-serif;
     background: var(--bg);
     color: var(--text);
-    line-height: 1.5;
+    line-height: 1.65;
   }
   header {
     padding: 28px 32px 20px;
     border-bottom: 1px solid var(--border);
-    background: linear-gradient(180deg, #161922, #0f1117);
+    background: var(--bg);
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 20px;
   }
-  [data-theme="light"] header {
-    background: linear-gradient(180deg, #ffffff, #f5f7fa);
+  [data-theme="dark"] header {
+    background: linear-gradient(180deg, #161922, #0f1117);
   }
-  header .header-left { flex: 1; }
-  header h1 { margin: 0; font-size: 24px; letter-spacing: -.3px; }
+  header .header-left { flex: 1; display: flex; align-items: center; gap: 16px; }
+  header .logo-base { display: inline-block; height: 32px; width: auto; }
+  header .logo-dark { display: none; height: 32px; width: auto; }
+  [data-theme="dark"] header .logo-base { display: none; }
+  [data-theme="dark"] header .logo-dark { display: inline-block; }
+  header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
   header p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
   .theme-toggle {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 4px;
     padding: 10px 14px;
     cursor: pointer;
     font-size: 18px;
@@ -72,41 +100,41 @@
   }
   .theme-toggle:hover {
     background: var(--panel-2);
-    transform: scale(1.05);
   }
   .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 32px 64px; }
 
   .card {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 4px;
     padding: 22px;
     margin-bottom: 22px;
     box-shadow: var(--shadow);
   }
-  .card h2 { margin: 0 0 16px; font-size: 16px; font-weight: 600; }
+  .card h2 { margin: 0 0 16px; font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
   .card h2 .sub { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
 
   .group { margin-bottom: 18px; }
-  .group > label.title { display:block; font-size: 13px; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
+  .group > label.title { display:block; font-size: 12px; color: var(--accent); font-weight: 600; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.1em; }
 
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 8px 14px; border-radius: 999px;
     background: var(--panel-2); border: 1px solid var(--border);
-    cursor: pointer; user-select: none; font-size: 14px; transition: all .12s;
+    cursor: pointer; user-select: none; font-size: 14px; font-weight: 600; transition: all .12s;
   }
   .chip:hover { border-color: var(--accent); }
   .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   .chip input { display: none; }
-  .chip .badge { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: rgba(255,255,255,.12); }
-  .chip.pi.on { background: var(--pi); border-color: var(--pi); color:#04222e; }
-  .chip.cc.on { background: var(--cc); border-color: var(--cc); color:#240a36; }
+  .chip .badge { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: rgba(255,255,255,.15); font-weight: 600; }
+  .chip.pi.on { background: var(--pi); border-color: var(--pi); color: #fff; }
+  [data-theme="dark"] .chip.pi.on { color: #06171f; }
+  .chip.cc.on { background: var(--cc); border-color: var(--cc); color: #fff; }
 
   .task-row {
     display:flex; align-items:center; gap:12px;
-    padding:10px 12px; border-radius:10px; cursor:pointer;
+    padding:10px 12px; border-radius:4px; cursor:pointer;
     border:1px solid transparent;
   }
   .task-row:hover { background: var(--panel-2); }
@@ -116,34 +144,40 @@
   .task-row .tid { font-weight:600; font-size:14px; }
   .task-row .desc { font-size:12.5px; color:var(--muted); }
   .cx { font-size:11px; padding:2px 9px; border-radius:999px; font-weight:600; }
-  .cx.trivial  { background:#14361f; color:#6ee7a8; }
-  .cx.simple   { background:#173049; color:#7cc4f8; }
-  .cx.medium   { background:#3a2f12; color:#fbd56b; }
-  .cx.complex  { background:#3d1b1b; color:#fca5a5; }
-  .cx.real     { background:#2b1847; color:#c4b5fd; }
-  .tool-tag { font-size:11px; color:var(--warn); border:1px solid #4a3c14; padding:1px 7px; border-radius:999px; }
+  .cx.trivial  { background:#e6f4e6; color:#2d7a2d; }
+  .cx.simple   { background:#e8f0fe; color:#003a78; }
+  .cx.medium   { background:#fff3e0; color:#b87a00; }
+  .cx.complex  { background:#fce4e4; color:#96122f; }
+  .cx.real     { background:#f3e8ff; color:#6b21a8; }
+  [data-theme="dark"] .cx.trivial  { background:#14361f; color:#6ee7a8; }
+  [data-theme="dark"] .cx.simple   { background:#173049; color:#7cc4f8; }
+  [data-theme="dark"] .cx.medium   { background:#3a2f12; color:#fbd56b; }
+  [data-theme="dark"] .cx.complex  { background:#3d1b1b; color:#fca5a5; }
+  [data-theme="dark"] .cx.real     { background:#2b1847; color:#c4b5fd; }
+  .tool-tag { font-size:11px; color:var(--warn); background:var(--warn-bg); border:1px solid var(--warn); padding:1px 7px; border-radius:999px; font-weight:600; }
 
   .controls { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
   .btn {
-    background: var(--accent); color:#fff; border:none; border-radius:10px;
+    background: var(--accent); color:#fff; border:none; border-radius:3px;
     padding:12px 22px; font-size:15px; font-weight:600; cursor:pointer; transition:.12s;
   }
-  .btn:hover { filter:brightness(1.1); }
+  .btn:hover { background: var(--accent-hover); }
   .btn:disabled { opacity:.5; cursor:not-allowed; }
   .btn.ghost { background:var(--panel-2); border:1px solid var(--border); color:var(--text); }
+  .btn.ghost:hover { background:var(--panel); }
   .est { color:var(--muted); font-size:14px; }
   .est b { color: var(--text); }
   select, input[type=number] {
     background:var(--panel-2); color:var(--text); border:1px solid var(--border);
-    border-radius:8px; padding:8px 10px; font-size:14px;
+    border-radius:3px; padding:8px 10px; font-size:14px; font-family: 'Inter Tight', sans-serif;
   }
 
   /* Progress */
   #progressCard { display:none; }
-  .pbar-outer { height:10px; background:var(--panel-2); border-radius:999px; overflow:hidden; margin:6px 0 14px; }
+  .pbar-outer { height:10px; background:var(--panel-2); border-radius:3px; overflow:hidden; margin:6px 0 14px; }
   .pbar-inner { height:100%; width:0%; background:linear-gradient(90deg,var(--pi),var(--accent),var(--cc)); transition:width .3s; }
-  .log { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size:12.5px; max-height:240px; overflow:auto; background:#0b0d13; border:1px solid var(--border); border-radius:10px; padding:12px; }
-  [data-theme="light"] .log { background: #fafbfc; }
+  .log { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size:12.5px; max-height:240px; overflow:auto; background:var(--panel-2); border:1px solid var(--border); border-radius:4px; padding:12px; }
+  [data-theme="dark"] .log { background: #0b0d13; }
   .log .line { padding:2px 0; white-space:pre-wrap; }
   .log .ok { color:var(--good); }
   .log .err { color:var(--bad); }
@@ -156,27 +190,30 @@
   /* Vergleichstabelle (ersetzt KPI-Kacheln) */
   .cmp-wrap { overflow-x:auto; margin-bottom:22px; }
   .cmp { width:100%; border-collapse:collapse; font-size:14px; }
-  .cmp th { padding:8px 14px; text-align:right; color:var(--muted); font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:.4px; border-bottom:2px solid var(--border); }
+  .cmp th { padding:8px 14px; text-align:right; color:var(--muted); font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; border-bottom:2px solid var(--border); }
   .cmp th:first-child { text-align:left; }
   .cmp td { padding:12px 14px; text-align:right; border-bottom:1px solid var(--border); vertical-align:top; }
   .cmp td:first-child { text-align:left; }
   .cmp .val { font-size:20px; font-weight:700; display:block; }
   .cmp .delta { display:inline-block; margin-top:4px; font-size:11.5px; font-weight:600; padding:2px 7px; border-radius:999px; }
-  .cmp .delta.good { background:#0f2e1a; color:#4ade80; }
-  .cmp .delta.bad  { background:#2e1212; color:#f87171; }
-  .cmp .delta.warn { background:#2e2212; color:#fbbf24; }
+  .cmp .delta.good { background:#e6f4e6; color:#2d7a2d; }
+  .cmp .delta.bad  { background:#fce4e4; color:#96122f; }
+  .cmp .delta.warn { background:#fff3e0; color:#b87a00; }
+  [data-theme="dark"] .cmp .delta.good { background:#0f2e1a; color:#4ade80; }
+  [data-theme="dark"] .cmp .delta.bad  { background:#2e1212; color:#f87171; }
+  [data-theme="dark"] .cmp .delta.warn { background:#2e2212; color:#fbbf24; }
   .cmp .harness-label { display:inline-flex; align-items:center; gap:8px; font-size:15px; font-weight:700; padding:4px 0; }
   .cmp .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
   .cmp .dot.pi { background:var(--pi); }
   .cmp .dot.cc { background:var(--cc); }
-  .price-note { font-size:12px; color:var(--muted); background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin-top:10px; line-height:1.7; }
+  .price-note { font-size:12px; color:var(--muted); background:var(--panel-2); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:10px 14px; margin-top:10px; line-height:1.7; }
   .price-note b { color:var(--text); }
   .price-note .warn { color:var(--warn); }
 
   table { width:100%; border-collapse:collapse; font-size:13.5px; }
   th, td { padding:9px 10px; text-align:right; border-bottom:1px solid var(--border); }
   th:first-child, td:first-child { text-align:left; }
-  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.4px; }
+  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:0.1em; }
   tr td .pill { font-size:11px; padding:1px 8px; border-radius:999px; }
   .pill.pi { background:rgba(56,189,248,.15); color:var(--pi); }
   .pill.cc { background:rgba(192,132,252,.15); color:var(--cc); }
@@ -186,44 +223,45 @@
   .bar-group .bar-label { font-size:13px; margin-bottom:6px; color:var(--muted); }
   .bar-track { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
   .bar-track .name { width:90px; font-size:13px; }
-  .bar-outer { flex:1; height:24px; background:var(--panel-2); border-radius:6px; overflow:hidden; }
-  .bar-fill { height:100%; border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; font-size:12px; font-weight:600; color:#06121a; min-width:34px; }
+  .bar-outer { flex:1; height:24px; background:var(--panel-2); border-radius:3px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:3px; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; font-size:12px; font-weight:600; color:#fff; min-width:34px; }
   .bar-fill.pi { background:var(--pi); }
-  .bar-fill.cc { background:var(--cc); color:#1a0a28; }
+  [data-theme="dark"] .bar-fill.pi { color:#06171f; }
+  .bar-fill.cc { background:var(--cc); }
 
-  details { background:var(--panel-2); border:1px solid var(--border); border-radius:10px; margin-bottom:10px; }
+  details { background:var(--panel-2); border:1px solid var(--border); border-radius:4px; margin-bottom:10px; }
   details summary { cursor:pointer; padding:12px 14px; font-weight:600; font-size:14px; user-select: none; }
   details summary:hover { background: var(--panel); }
   details .resp-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:0 14px 14px; }
-  .prompt-box { margin:0 14px 14px; background:#0b0d13; border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:8px; padding:10px 14px; }
-  [data-theme="light"] .prompt-box { background: #fafbfc; }
-  .prompt-box .plabel { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-bottom:6px; }
+  .prompt-box { margin:0 14px 14px; background:var(--panel-2); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:10px 14px; }
+  [data-theme="dark"] .prompt-box { background: #0b0d13; }
+  .prompt-box .plabel { font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:var(--accent); font-weight:600; margin-bottom:6px; }
   .prompt-box pre { white-space:pre-wrap; word-break:break-word; margin:0; font-size:12.5px; font-family:ui-monospace,Menlo,monospace; max-height:200px; overflow:auto; color:var(--text); }
-  .resp-box { background:#0b0d13; border:1px solid var(--border); border-radius:8px; padding:12px; }
-  [data-theme="light"] .resp-box { background: #fafbfc; }
+  .resp-box { background:var(--panel-2); border:1px solid var(--border); border-radius:4px; padding:12px; }
+  [data-theme="dark"] .resp-box { background: #0b0d13; }
   .resp-box h4 { margin:0 0 6px; font-size:13px; }
   .resp-box .stat { font-size:12px; color:var(--muted); margin-bottom:8px; }
   .resp-box pre { white-space:pre-wrap; word-break:break-word; margin:0; font-size:12.5px; font-family:ui-monospace,Menlo,monospace; max-height:340px; overflow:auto; }
   @media (max-width:720px){ details .resp-grid{ grid-template-columns:1fr; } }
 
   .hint { font-size:12.5px; color:var(--muted); margin-top:10px; }
-  .section-title { font-size:14px; font-weight:600; margin:26px 0 12px; color:var(--text); }
+  .section-title { font-size:14px; font-weight:700; letter-spacing:-0.02em; margin:26px 0 12px; color:var(--text); }
   .toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
 
   /* Drill-Down Panel */
-  .drill-panel { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font-size: 12.5px; line-height: 1.7; }
+  .drill-panel { background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; font-size: 12.5px; line-height: 1.7; }
   .drill-panel h5 { margin: 0 0 8px; font-size: 13px; color: var(--accent); }
   .drill-panel .drill-row { display: flex; gap: 20px; margin-bottom: 6px; flex-wrap: wrap; }
   .drill-panel .drill-item { flex: 1; min-width: 200px; }
-  .drill-panel .drill-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+  .drill-panel .drill-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
   .drill-panel .drill-value { font-weight: 600; color: var(--text); font-size: 13px; }
 
   /* Provenienz Panel */
   .prov-section { margin-bottom: 16px; }
-  .prov-section h5 { margin: 0 0 8px; font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: .5px; }
+  .prov-section h5 { margin: 0 0 8px; font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
   .prov-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
   .prov-item { }
-  .prov-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+  .prov-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
   .prov-value { font-weight: 600; color: var(--text); font-size: 13px; font-family: ui-monospace, monospace; }
 
   /* Präsentieren-Overlay */
@@ -249,7 +287,7 @@
     right: 20px;
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 4px;
     padding: 10px 18px;
     cursor: pointer;
     font-size: 16px;
@@ -287,6 +325,7 @@
   .present-title {
     font-size: 32px;
     font-weight: 700;
+    letter-spacing: -0.02em;
     text-align: center;
     margin-bottom: 50px;
     color: var(--text);
@@ -300,17 +339,17 @@
   .present-card {
     background: var(--panel);
     border: 2px solid var(--border);
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 40px 30px;
     text-align: center;
     box-shadow: var(--shadow);
   }
   .present-card-label {
     font-size: 16px;
-    color: var(--muted);
+    color: var(--accent);
     margin-bottom: 16px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.1em;
     font-weight: 600;
   }
   .present-card-value {
@@ -417,8 +456,57 @@
 <body>
 <header>
   <div class="header-left">
-    <h1>🪙 Token-Benchmark</h1>
-    <p>Vergleich des Token-Verbrauchs: <b style="color:var(--pi)">Pi</b> vs <b style="color:var(--cc)">Claude Code</b> — gleiche Prompts, gleiche Modelle.</p>
+    <!-- SelectLine Group Logo: Base (hell) und Orange Highlight (dunkel) -->
+    <svg class="logo-base" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1071.47 121.21" role="img" aria-label="SelectLine Group">
+      <defs><style>.sl-base-1{fill:#ff6c2f;}.sl-base-2{fill:#1f3340;}</style></defs>
+      <g>
+        <polygon class="sl-base-2" points="89.47 0 59.5 0 0 59.51 14.98 74.5 59.51 119.02 89.48 119.02 29.97 59.51 89.47 0"/>
+        <polygon class="sl-base-1" points="64.51 42.59 81.43 59.51 64.58 76.36 79.57 91.35 96.42 74.49 96.42 74.5 111.4 59.51 79.5 27.6 64.51 42.59"/>
+        <path class="sl-base-2" d="M216.17,60.36c-2.17-1.9-4.72-3.5-7.65-4.81-2.94-1.31-6.14-2.35-9.61-3.14l-7.14-1.77c-2.29-.54-4.4-1.21-6.31-2.01-1.92-.81-3.45-1.84-4.59-3.12-1.15-1.27-1.72-2.84-1.72-4.7,0-1.75.5-3.31,1.5-4.67,1-1.36,2.46-2.43,4.38-3.2,1.92-.77,4.23-1.15,6.96-1.15,4.05,0,7.26.88,9.64,2.63,2.38,1.75,3.71,4.19,4,7.3h16.27c-.07-4.73-1.35-8.9-3.84-12.51-2.49-3.62-5.94-6.45-10.37-8.49-4.42-2.04-9.61-3.06-15.55-3.06s-11.04,1.01-15.6,3.03c-4.56,2.02-8.16,4.85-10.79,8.49-2.63,3.63-3.95,7.87-3.95,12.7,0,5.91,1.95,10.63,5.85,14.15,3.9,3.53,9.22,6.1,15.95,7.71l8.75,2.15c2.9.68,5.36,1.45,7.38,2.31,2.02.86,3.56,1.9,4.62,3.12,1.06,1.22,1.58,2.72,1.58,4.51,0,1.97-.58,3.7-1.75,5.18-1.16,1.49-2.81,2.64-4.94,3.46-2.13.82-4.63,1.24-7.49,1.24s-5.6-.45-7.9-1.34c-2.29-.89-4.12-2.25-5.48-4.06-1.36-1.81-2.15-4.04-2.36-6.69h-16.33c.14,5.77,1.55,10.6,4.22,14.5,2.67,3.9,6.39,6.84,11.17,8.81,4.78,1.97,10.39,2.95,16.84,2.95s12.14-.98,16.76-2.93,8.16-4.73,10.61-8.33c2.45-3.6,3.68-7.85,3.68-12.76,0-3.33-.59-6.28-1.77-8.84-1.18-2.56-2.86-4.79-5.02-6.69Z"/>
+        <path class="sl-base-2" d="M280.4,45.56c-2.58-2.52-5.59-4.42-9.02-5.69-3.44-1.27-7.14-1.91-11.12-1.91-5.87,0-10.98,1.31-15.33,3.92-4.35,2.61-7.72,6.25-10.1,10.9-2.38,4.66-3.57,10.06-3.57,16.22s1.19,11.83,3.57,16.46c2.38,4.64,5.81,8.21,10.29,10.72,4.48,2.51,9.79,3.76,15.95,3.76,4.94,0,9.29-.76,13.05-2.28s6.83-3.65,9.21-6.39c2.38-2.74,3.95-5.95,4.7-9.64l-15.36-1.02c-.54,1.47-1.35,2.72-2.44,3.76-1.09,1.04-2.39,1.83-3.89,2.36s-3.19.81-5.05.81c-2.69,0-5.06-.62-7.12-1.85-2.06-1.24-3.66-3.01-4.81-5.32-1.03-2.07-1.57-4.55-1.67-7.38h40.88v-4.51c0-5.12-.72-9.59-2.15-13.4-1.43-3.81-3.44-6.98-6.02-9.51ZM247.73,62.72c.19-1.97.66-3.76,1.41-5.37,1-2.15,2.44-3.85,4.32-5.1,1.88-1.25,4.18-1.88,6.9-1.88s5,.62,6.85,1.85c1.84,1.24,3.23,2.98,4.16,5.24.64,1.56,1.05,3.32,1.25,5.26h-24.89Z"/>
+        <rect class="sl-base-2" x="298.96" y="18.73" width="16.6" height="80.03"/>
+        <path class="sl-base-2" d="M375.3,45.56c-2.58-2.52-5.59-4.42-9.02-5.69-3.44-1.27-7.14-1.91-11.12-1.91-5.87,0-10.98,1.31-15.33,3.92-4.35,2.61-7.72,6.25-10.1,10.9-2.38,4.66-3.57,10.06-3.57,16.22s1.19,11.83,3.57,16.46c2.38,4.64,5.81,8.21,10.29,10.72,4.48,2.51,9.79,3.76,15.95,3.76,4.94,0,9.29-.76,13.05-2.28s6.83-3.65,9.21-6.39c2.38-2.74,3.95-5.95,4.7-9.64l-15.36-1.02c-.54,1.47-1.35,2.72-2.44,3.76-1.09,1.04-2.39,1.83-3.89,2.36s-3.19.81-5.05.81c-2.69,0-5.06-.62-7.12-1.85-2.06-1.24-3.66-3.01-4.81-5.32-1.03-2.07-1.57-4.55-1.67-7.38h40.88v-4.51c0-5.12-.72-9.59-2.15-13.4-1.43-3.81-3.44-6.98-6.02-9.51ZM342.64,62.72c.19-1.97.66-3.76,1.41-5.37,1-2.15,2.44-3.85,4.32-5.1,1.88-1.25,4.18-1.88,6.9-1.88s5,.62,6.85,1.85c1.84,1.24,3.23,2.98,4.16,5.24.64,1.56,1.05,3.32,1.25,5.26h-24.89Z"/>
+        <path class="sl-base-2" d="M414.35,53.03c1.92-1.38,4.16-2.07,6.74-2.07,2.04,0,3.83.41,5.37,1.24,1.54.82,2.77,1.99,3.71,3.49.93,1.5,1.54,3.26,1.83,5.26h15.68c-.21-4.65-1.47-8.7-3.76-12.14-2.29-3.44-5.4-6.1-9.32-8-3.92-1.9-8.5-2.85-13.72-2.85-6.09,0-11.33,1.31-15.74,3.92-4.4,2.61-7.8,6.25-10.18,10.9-2.38,4.66-3.57,10.06-3.57,16.22s1.18,11.45,3.54,16.09c2.36,4.64,5.75,8.27,10.15,10.9s9.67,3.95,15.79,3.95c5.37,0,10.01-.98,13.91-2.93,3.9-1.95,6.96-4.67,9.18-8.16,2.22-3.49,3.46-7.53,3.71-12.11h-15.68c-.47,3.19-1.68,5.68-3.65,7.49-1.97,1.81-4.39,2.71-7.25,2.71-2.58,0-4.83-.72-6.74-2.15-1.92-1.43-3.4-3.51-4.46-6.23-1.06-2.72-1.58-5.98-1.58-9.78s.53-7.03,1.58-9.69c1.06-2.67,2.54-4.69,4.46-6.07Z"/>
+        <path class="sl-base-2" d="M486.48,85.98c-.79.11-1.5.16-2.15.16-1.97,0-3.4-.47-4.3-1.42-.9-.95-1.34-2.42-1.34-4.43v-29h11.33v-12.57h-11.33v-14.29h-16.6v14.29h-8.22v12.57h8.22v31.21c0,5.44,1.63,9.66,4.89,12.65,3.26,2.99,7.88,4.49,13.86,4.49,1.65,0,3.32-.13,5.02-.38,1.7-.25,3.46-.64,5.29-1.18l-2.63-12.46c-.57.14-1.25.27-2.04.38Z"/>
+        <polygon class="sl-base-2" points="518.94 18.73 502.08 18.73 502.08 98.76 553.27 98.76 553.27 84.8 518.94 84.8 518.94 18.73"/>
+        <path class="sl-base-2" d="M572.25,14.22c-2.47,0-4.58.81-6.34,2.44-1.75,1.63-2.63,3.61-2.63,5.94s.88,4.32,2.63,5.96c1.75,1.65,3.87,2.47,6.34,2.47s4.64-.82,6.39-2.47c1.75-1.65,2.63-3.63,2.63-5.96s-.88-4.31-2.63-5.94c-1.75-1.63-3.89-2.44-6.39-2.44Z"/>
+        <rect class="sl-base-2" x="563.98" y="38.71" width="16.6" height="60.05"/>
+        <path class="sl-base-2" d="M639.12,40.7c-3.1-1.83-6.72-2.74-10.88-2.74-4.48,0-8.2,1.02-11.17,3.06-2.97,2.04-5.14,4.83-6.5,8.38h-.59v-10.69h-16.33v60.05h16.6v-34.7c0-2.58.48-4.78,1.45-6.61s2.31-3.23,4.03-4.22c1.72-.98,3.69-1.48,5.91-1.48,3.33,0,5.94,1.05,7.84,3.14,1.9,2.09,2.85,4.97,2.85,8.62v35.23h16.6v-38.19c0-4.69-.86-8.72-2.58-12.08-1.72-3.37-4.13-5.96-7.22-7.79Z"/>
+        <path class="sl-base-2" d="M708.67,45.56c-2.58-2.52-5.59-4.42-9.02-5.69-3.44-1.27-7.14-1.91-11.12-1.91-5.87,0-10.98,1.31-15.33,3.92-4.35,2.61-7.72,6.25-10.1,10.9-2.38,4.66-3.57,10.06-3.57,16.22s1.19,11.83,3.57,16.46c2.38,4.64,5.81,8.21,10.29,10.72,4.48,2.51,9.79,3.76,15.95,3.76,4.94,0,9.29-.76,13.05-2.28s6.83-3.65,9.21-6.39c2.38-2.74,3.95-5.95,4.7-9.64l-15.36-1.02c-.54,1.47-1.35,2.72-2.44,3.76-1.09,1.04-2.39,1.83-3.89,2.36s-3.19.81-5.05.81c-2.69,0-5.06-.62-7.12-1.85-2.06-1.24-3.66-3.01-4.81-5.32-1.03-2.07-1.57-4.55-1.67-7.38h40.88v-4.51c0-5.12-.72-9.59-2.15-13.4-1.43-3.81-3.44-6.98-6.02-9.51ZM676,62.72c.19-1.97.66-3.76,1.41-5.37,1-2.15,2.44-3.85,4.32-5.10,1.88-1.25,4.18-1.88,6.9-1.88s5,.62,6.85,1.85c1.84,1.24,3.23,2.98,4.16,5.24.64,1.56,1.05,3.32,1.25,5.26h-24.89Z"/>
+        <path class="sl-base-2" d="M790.25,68.68h17.12c-.07,3.17-.79,5.95-2.16,8.33-1.45,2.51-3.53,4.45-6.23,5.83-2.7,1.38-5.97,2.07-9.8,2.07-4.23,0-7.89-1.03-10.98-3.09-3.1-2.06-5.51-5.04-7.22-8.94-1.72-3.9-2.58-8.63-2.58-14.18s.87-10.28,2.61-14.18c1.74-3.9,4.15-6.87,7.25-8.89,3.1-2.02,6.69-3.03,10.77-3.03,2.18,0,4.18.28,5.99.83,1.81.56,3.43,1.34,4.86,2.36,1.43,1.02,2.64,2.27,3.62,3.76.99,1.49,1.75,3.18,2.28,5.08h17.13c-.54-3.97-1.76-7.6-3.68-10.88-1.92-3.28-4.4-6.12-7.44-8.54-3.04-2.42-6.52-4.28-10.42-5.59-3.9-1.31-8.11-1.96-12.62-1.96-7.05,0-13.41,1.63-19.07,4.89-5.66,3.26-10.14,7.96-13.46,14.10-3.31,6.14-4.97,13.54-4.97,22.21s1.58,15.69,4.75,21.83c3.17,6.14,7.59,10.87,13.27,14.18,5.67,3.31,12.27,4.97,19.79,4.97,6.73,0,12.7-1.35,17.91-4.06,5.21-2.7,9.3-6.58,12.27-11.63,2.97-5.05,4.46-11.08,4.46-18.10v-10.1h-33.46v12.73Z"/>
+        <path class="sl-base-2" d="M866.92,37.91c-3.33,0-6.28.96-8.86,2.87-2.58,1.92-4.42,4.74-5.53,8.46h-.64v-10.53h-16.06v60.05h16.6v-33.95c0-2.43.55-4.59,1.64-6.47,1.09-1.88,2.6-3.35,4.54-4.40,1.93-1.06,4.10-1.58,6.5-1.58,1.18,0,2.46.08,3.84.24,1.38.16,2.46.37,3.25.62v-14.72c-.75-.21-1.6-.37-2.55-.46-.95-.09-1.85-.13-2.71-.13Z"/>
+        <path class="sl-base-2" d="M920.46,41.85c-4.42-2.6-9.68-3.89-15.76-3.89s-11.29,1.3-15.71,3.89c-4.42,2.6-7.82,6.21-10.21,10.85-2.38,4.64-3.57,10.07-3.57,16.30s1.19,11.56,3.57,16.19c2.38,4.64,5.78,8.25,10.21,10.85,4.42,2.6,9.66,3.89,15.71,3.89s11.34-1.3,15.76-3.89c4.42-2.6,7.82-6.21,10.21-10.85,2.38-4.64,3.57-10.03,3.57-16.19s-1.19-11.66-3.57-16.3c-2.38-4.64-5.78-8.25-10.21-10.85ZM915.95,78.19c-.95,2.72-2.35,4.86-4.22,6.42-1.86,1.56-4.17,2.34-6.93,2.34s-5.13-.78-7.01-2.34c-1.88-1.56-3.29-3.7-4.24-6.42-.95-2.72-1.42-5.82-1.42-9.29s.47-6.61,1.42-9.29c.95-2.69,2.36-4.8,4.24-6.34,1.88-1.54,4.22-2.31,7.01-2.31s5.07.77,6.93,2.31c1.86,1.54,3.27,3.65,4.22,6.34.95,2.69,1.42,5.78,1.42,9.29s-.47,6.57-1.42,9.29Z"/>
+        <path class="sl-base-2" d="M983.36,73.25c0,2.65-.55,4.89-1.64,6.71-1.09,1.83-2.5,3.2-4.22,4.11s-3.58,1.37-5.59,1.37c-3.15.04-5.68-.98-7.57-3.04-1.9-2.06-2.85-4.84-2.85-8.35v-35.34h-16.6v38.24c0,4.69.85,8.72,2.55,12.08,1.7,3.37,4.08,5.95,7.14,7.76,3.06,1.81,6.6,2.71,10.61,2.71,4.51.04,8.33-1.03,11.44-3.20,3.12-2.17,5.35-4.99,6.71-8.46h.64v10.90h15.95v-60.05h-16.6v34.54Z"/>
+        <path class="sl-base-2" d="M1068.14,51.66c-2.22-4.58-5.17-8.01-8.83-10.29-3.67-2.27-7.71-3.41-12.11-3.41-3.33,0-6.12.56-8.38,1.69s-4.08,2.53-5.48,4.22c-1.4,1.68-2.47,3.35-3.22,5h-.75v-10.15h-16.33v82.5h16.6v-32.07h.48c.79,1.65,1.89,3.29,3.3,4.91,1.41,1.63,3.25,2.98,5.5,4.06s5,1.61,8.22,1.61c4.58,0,8.71-1.18,12.38-3.54,3.67-2.36,6.58-5.85,8.73-10.45,2.15-4.6,3.22-10.23,3.22-16.89s-1.11-12.6-3.33-17.19ZM1052.99,78c-.97,2.67-2.38,4.75-4.24,6.26-1.86,1.5-4.15,2.26-6.88,2.26s-4.91-.74-6.79-2.23c-1.88-1.49-3.32-3.55-4.32-6.20-1-2.65-1.5-5.75-1.5-9.29s.49-6.69,1.48-9.32c.98-2.63,2.42-4.67,4.30-6.12,1.88-1.45,4.16-2.18,6.85-2.18s5.07.75,6.93,2.26c1.86,1.5,3.27,3.57,4.22,6.20.95,2.63,1.42,5.69,1.42,9.16s-.48,6.54-1.45,9.21Z"/>
+      </g>
+    </svg>
+    <svg class="logo-dark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1071.47 121.21" role="img" aria-label="SelectLine Group">
+      <defs><style>.sl-dark-1{fill:#ffffff;}.sl-dark-2{fill:#ff6c2f;}</style></defs>
+      <g>
+        <polygon class="sl-dark-1" points="89.47 0 59.5 0 0 59.51 14.98 74.5 59.51 119.02 89.48 119.02 29.97 59.51 89.47 0"/>
+        <polygon class="sl-dark-2" points="64.51 42.59 81.43 59.51 64.58 76.36 79.57 91.35 96.42 74.49 96.42 74.5 111.4 59.51 79.5 27.6 64.51 42.59"/>
+        <path class="sl-dark-1" d="M216.17,60.36c-2.17-1.9-4.72-3.5-7.65-4.81-2.94-1.31-6.14-2.35-9.61-3.14l-7.14-1.77c-2.29-.54-4.4-1.21-6.31-2.01-1.92-.81-3.45-1.84-4.59-3.12-1.15-1.27-1.72-2.84-1.72-4.7,0-1.75.5-3.31,1.5-4.67,1-1.36,2.46-2.43,4.38-3.2,1.92-.77,4.23-1.15,6.96-1.15,4.05,0,7.26.88,9.64,2.63,2.38,1.75,3.71,4.19,4,7.3h16.27c-.07-4.73-1.35-8.9-3.84-12.51-2.49-3.62-5.94-6.45-10.37-8.49-4.42-2.04-9.61-3.06-15.55-3.06s-11.04,1.01-15.6,3.03c-4.56,2.02-8.16,4.85-10.79,8.49-2.63,3.63-3.95,7.87-3.95,12.7,0,5.91,1.95,10.63,5.85,14.15,3.9,3.53,9.22,6.1,15.95,7.71l8.75,2.15c2.9.68,5.36,1.45,7.38,2.31,2.02.86,3.56,1.9,4.62,3.12,1.06,1.22,1.58,2.72,1.58,4.51,0,1.97-.58,3.7-1.75,5.18-1.16,1.49-2.81,2.64-4.94,3.46-2.13.82-4.63,1.24-7.49,1.24s-5.6-.45-7.9-1.34c-2.29-.89-4.12-2.25-5.48-4.06-1.36-1.81-2.15-4.04-2.36-6.69h-16.33c.14,5.77,1.55,10.6,4.22,14.5,2.67,3.9,6.39,6.84,11.17,8.81,4.78,1.97,10.39,2.95,16.84,2.95s12.14-.98,16.76-2.93,8.16-4.73,10.61-8.33c2.45-3.6,3.68-7.85,3.68-12.76,0-3.33-.59-6.28-1.77-8.84-1.18-2.56-2.86-4.79-5.02-6.69Z"/>
+        <path class="sl-dark-1" d="M280.4,45.56c-2.58-2.52-5.59-4.42-9.02-5.69-3.44-1.27-7.14-1.91-11.12-1.91-5.87,0-10.98,1.31-15.33,3.92-4.35,2.61-7.72,6.25-10.1,10.9-2.38,4.66-3.57,10.06-3.57,16.22s1.19,11.83,3.57,16.46c2.38,4.64,5.81,8.21,10.29,10.72,4.48,2.51,9.79,3.76,15.95,3.76,4.94,0,9.29-.76,13.05-2.28s6.83-3.65,9.21-6.39c2.38-2.74,3.95-5.95,4.7-9.64l-15.36-1.02c-.54,1.47-1.35,2.72-2.44,3.76-1.09,1.04-2.39,1.83-3.89,2.36s-3.19.81-5.05.81c-2.69,0-5.06-.62-7.12-1.85-2.06-1.24-3.66-3.01-4.81-5.32-1.03-2.07-1.57-4.55-1.67-7.38h40.88v-4.51c0-5.12-.72-9.59-2.15-13.4-1.43-3.81-3.44-6.98-6.02-9.51ZM247.73,62.72c.19-1.97.66-3.76,1.41-5.37,1-2.15,2.44-3.85,4.32-5.1,1.88-1.25,4.18-1.88,6.9-1.88s5,.62,6.85,1.85c1.84,1.24,3.23,2.98,4.16,5.24.64,1.56,1.05,3.32,1.25,5.26h-24.89Z"/>
+        <rect class="sl-dark-1" x="298.96" y="18.73" width="16.6" height="80.03"/>
+        <path class="sl-dark-1" d="M375.3,45.56c-2.58-2.52-5.59-4.42-9.02-5.69-3.44-1.27-7.14-1.91-11.12-1.91-5.87,0-10.98,1.31-15.33,3.92-4.35,2.61-7.72,6.25-10.1,10.9-2.38,4.66-3.57,10.06-3.57,16.22s1.19,11.83,3.57,16.46c2.38,4.64,5.81,8.21,10.29,10.72,4.48,2.51,9.79,3.76,15.95,3.76,4.94,0,9.29-.76,13.05-2.28s6.83-3.65,9.21-6.39c2.38-2.74,3.95-5.95,4.7-9.64l-15.36-1.02c-.54,1.47-1.35,2.72-2.44,3.76-1.09,1.04-2.39,1.83-3.89,2.36s-3.19.81-5.05.81c-2.69,0-5.06-.62-7.12-1.85-2.06-1.24-3.66-3.01-4.81-5.32-1.03-2.07-1.57-4.55-1.67-7.38h40.88v-4.51c0-5.12-.72-9.59-2.15-13.4-1.43-3.81-3.44-6.98-6.02-9.51ZM342.64,62.72c.19-1.97.66-3.76,1.41-5.37,1-2.15,2.44-3.85,4.32-5.1,1.88-1.25,4.18-1.88,6.9-1.88s5,.62,6.85,1.85c1.84,1.24,3.23,2.98,4.16,5.24.64,1.56,1.05,3.32,1.25,5.26h-24.89Z"/>
+        <path class="sl-dark-1" d="M414.35,53.03c1.92-1.38,4.16-2.07,6.74-2.07,2.04,0,3.83.41,5.37,1.24,1.54.82,2.77,1.99,3.71,3.49.93,1.5,1.54,3.26,1.83,5.26h15.68c-.21-4.65-1.47-8.7-3.76-12.14-2.29-3.44-5.4-6.1-9.32-8-3.92-1.9-8.5-2.85-13.72-2.85-6.09,0-11.33,1.31-15.74,3.92-4.4,2.61-7.8,6.25-10.18,10.9-2.38,4.66-3.57,10.06-3.57,16.22s1.18,11.45,3.54,16.09c2.36,4.64,5.75,8.27,10.15,10.9s9.67,3.95,15.79,3.95c5.37,0,10.01-.98,13.91-2.93,3.9-1.95,6.96-4.67,9.18-8.16,2.22-3.49,3.46-7.53,3.71-12.11h-15.68c-.47,3.19-1.68,5.68-3.65,7.49-1.97,1.81-4.39,2.71-7.25,2.71-2.58,0-4.83-.72-6.74-2.15-1.92-1.43-3.4-3.51-4.46-6.23-1.06-2.72-1.58-5.98-1.58-9.78s.53-7.03,1.58-9.69c1.06-2.67,2.54-4.69,4.46-6.07Z"/>
+        <path class="sl-dark-1" d="M486.48,85.98c-.79.11-1.5.16-2.15.16-1.97,0-3.4-.47-4.3-1.42-.9-.95-1.34-2.42-1.34-4.43v-29h11.33v-12.57h-11.33v-14.29h-16.6v14.29h-8.22v12.57h8.22v31.21c0,5.44,1.63,9.66,4.89,12.65,3.26,2.99,7.88,4.49,13.86,4.49,1.65,0,3.32-.13,5.02-.38,1.7-.25,3.46-.64,5.29-1.18l-2.63-12.46c-.57.14-1.25.27-2.04.38Z"/>
+        <polygon class="sl-dark-1" points="518.94 18.73 502.08 18.73 502.08 98.76 553.27 98.76 553.27 84.8 518.94 84.8 518.94 18.73"/>
+        <path class="sl-dark-1" d="M572.25,14.22c-2.47,0-4.58.81-6.34,2.44-1.75,1.63-2.63,3.61-2.63,5.94s.88,4.32,2.63,5.96c1.75,1.65,3.87,2.47,6.34,2.47s4.64-.82,6.39-2.47c1.75-1.65,2.63-3.63,2.63-5.96s-.88-4.31-2.63-5.94c-1.75-1.63-3.89-2.44-6.39-2.44Z"/>
+        <rect class="sl-dark-1" x="563.98" y="38.71" width="16.6" height="60.05"/>
+        <path class="sl-dark-1" d="M639.12,40.7c-3.1-1.83-6.72-2.74-10.88-2.74-4.48,0-8.2,1.02-11.17,3.06-2.97,2.04-5.14,4.83-6.5,8.38h-.59v-10.69h-16.33v60.05h16.6v-34.7c0-2.58.48-4.78,1.45-6.61s2.31-3.23,4.03-4.22c1.72-.98,3.69-1.48,5.91-1.48,3.33,0,5.94,1.05,7.84,3.14,1.9,2.09,2.85,4.97,2.85,8.62v35.23h16.6v-38.19c0-4.69-.86-8.72-2.58-12.08-1.72-3.37-4.13-5.96-7.22-7.79Z"/>
+        <path class="sl-dark-1" d="M708.67,45.56c-2.58-2.52-5.59-4.42-9.02-5.69-3.44-1.27-7.14-1.91-11.12-1.91-5.87,0-10.98,1.31-15.33,3.92-4.35,2.61-7.72,6.25-10.1,10.9-2.38,4.66-3.57,10.06-3.57,16.22s1.19,11.83,3.57,16.46c2.38,4.64,5.81,8.21,10.29,10.72,4.48,2.51,9.79,3.76,15.95,3.76,4.94,0,9.29-.76,13.05-2.28s6.83-3.65,9.21-6.39c2.38-2.74,3.95-5.95,4.7-9.64l-15.36-1.02c-.54,1.47-1.35,2.72-2.44,3.76-1.09,1.04-2.39,1.83-3.89,2.36s-3.19.81-5.05.81c-2.69,0-5.06-.62-7.12-1.85-2.06-1.24-3.66-3.01-4.81-5.32-1.03-2.07-1.57-4.55-1.67-7.38h40.88v-4.51c0-5.12-.72-9.59-2.15-13.4-1.43-3.81-3.44-6.98-6.02-9.51ZM676,62.72c.19-1.97.66-3.76,1.41-5.37,1-2.15,2.44-3.85,4.32-5.10,1.88-1.25,4.18-1.88,6.9-1.88s5,.62,6.85,1.85c1.84,1.24,3.23,2.98,4.16,5.24.64,1.56,1.05,3.32,1.25,5.26h-24.89Z"/>
+        <path class="sl-dark-1" d="M790.25,68.68h17.12c-.07,3.17-.79,5.95-2.16,8.33-1.45,2.51-3.53,4.45-6.23,5.83-2.7,1.38-5.97,2.07-9.8,2.07-4.23,0-7.89-1.03-10.98-3.09-3.1-2.06-5.51-5.04-7.22-8.94-1.72-3.9-2.58-8.63-2.58-14.18s.87-10.28,2.61-14.18c1.74-3.9,4.15-6.87,7.25-8.89,3.1-2.02,6.69-3.03,10.77-3.03,2.18,0,4.18.28,5.99.83,1.81.56,3.43,1.34,4.86,2.36,1.43,1.02,2.64,2.27,3.62,3.76.99,1.49,1.75,3.18,2.28,5.08h17.13c-.54-3.97-1.76-7.6-3.68-10.88-1.92-3.28-4.4-6.12-7.44-8.54-3.04-2.42-6.52-4.28-10.42-5.59-3.9-1.31-8.11-1.96-12.62-1.96-7.05,0-13.41,1.63-19.07,4.89-5.66,3.26-10.14,7.96-13.46,14.10-3.31,6.14-4.97,13.54-4.97,22.21s1.58,15.69,4.75,21.83c3.17,6.14,7.59,10.87,13.27,14.18,5.67,3.31,12.27,4.97,19.79,4.97,6.73,0,12.7-1.35,17.91-4.06,5.21-2.7,9.3-6.58,12.27-11.63,2.97-5.05,4.46-11.08,4.46-18.10v-10.1h-33.46v12.73Z"/>
+        <path class="sl-dark-1" d="M866.92,37.91c-3.33,0-6.28.96-8.86,2.87-2.58,1.92-4.42,4.74-5.53,8.46h-.64v-10.53h-16.06v60.05h16.6v-33.95c0-2.43.55-4.59,1.64-6.47,1.09-1.88,2.6-3.35,4.54-4.40,1.93-1.06,4.10-1.58,6.5-1.58,1.18,0,2.46.08,3.84.24,1.38.16,2.46.37,3.25.62v-14.72c-.75-.21-1.6-.37-2.55-.46-.95-.09-1.85-.13-2.71-.13Z"/>
+        <path class="sl-dark-1" d="M920.46,41.85c-4.42-2.6-9.68-3.89-15.76-3.89s-11.29,1.3-15.71,3.89c-4.42,2.6-7.82,6.21-10.21,10.85-2.38,4.64-3.57,10.07-3.57,16.30s1.19,11.56,3.57,16.19c2.38,4.64,5.78,8.25,10.21,10.85,4.42,2.6,9.66,3.89,15.71,3.89s11.34-1.3,15.76-3.89c4.42-2.6,7.82-6.21,10.21-10.85,2.38-4.64,3.57-10.03,3.57-16.19s-1.19-11.66-3.57-16.3c-2.38-4.64-5.78-8.25-10.21-10.85ZM915.95,78.19c-.95,2.72-2.35,4.86-4.22,6.42-1.86,1.56-4.17,2.34-6.93,2.34s-5.13-.78-7.01-2.34c-1.88-1.56-3.29-3.7-4.24-6.42-.95-2.72-1.42-5.82-1.42-9.29s.47-6.61,1.42-9.29c.95-2.69,2.36-4.8,4.24-6.34,1.88-1.54,4.22-2.31,7.01-2.31s5.07.77,6.93,2.31c1.86,1.54,3.27,3.65,4.22,6.34.95,2.69,1.42,5.78,1.42,9.29s-.47,6.57-1.42,9.29Z"/>
+        <path class="sl-dark-1" d="M983.36,73.25c0,2.65-.55,4.89-1.64,6.71-1.09,1.83-2.5,3.2-4.22,4.11s-3.58,1.37-5.59,1.37c-3.15.04-5.68-.98-7.57-3.04-1.9-2.06-2.85-4.84-2.85-8.35v-35.34h-16.6v38.24c0,4.69.85,8.72,2.55,12.08,1.7,3.37,4.08,5.95,7.14,7.76,3.06,1.81,6.6,2.71,10.61,2.71,4.51.04,8.33-1.03,11.44-3.20,3.12-2.17,5.35-4.99,6.71-8.46h.64v10.90h15.95v-60.05h-16.6v34.54Z"/>
+        <path class="sl-dark-1" d="M1068.14,51.66c-2.22-4.58-5.17-8.01-8.83-10.29-3.67-2.27-7.71-3.41-12.11-3.41-3.33,0-6.12.56-8.38,1.69s-4.08,2.53-5.48,4.22c-1.4,1.68-2.47,3.35-3.22,5h-.75v-10.15h-16.33v82.5h16.6v-32.07h.48c.79,1.65,1.89,3.29,3.3,4.91,1.41,1.63,3.25,2.98,5.5,4.06s5,1.61,8.22,1.61c4.58,0,8.71-1.18,12.38-3.54,3.67-2.36,6.58-5.85,8.73-10.45,2.15-4.6,3.22-10.23,3.22-16.89s-1.11-12.6-3.33-17.19ZM1052.99,78c-.97,2.67-2.38,4.75-4.24,6.26-1.86,1.5-4.15,2.26-6.88,2.26s-4.91-.74-6.79-2.23c-1.88-1.49-3.32-3.55-4.32-6.20-1-2.65-1.5-5.75-1.5-9.29s.49-6.69,1.48-9.32c.98-2.63,2.42-4.67,4.30-6.12,1.88-1.45,4.16-2.18,6.85-2.18s5.07.75,6.93,2.26c1.86,1.5,3.27,3.57,4.22,6.20.95,2.63,1.42,5.69,1.42,9.16s-.48,6.54-1.45,9.21Z"/>
+      </g>
+    </svg>
+    <div style="flex:1">
+      <h1>Token-Benchmark</h1>
+      <p>Vergleich des Token-Verbrauchs: <b style="color:var(--pi)">Pi</b> vs <b style="color:var(--cc)">Claude Code</b> — gleiche Prompts, gleiche Modelle.</p>
+    </div>
   </div>
   <button class="theme-toggle" onclick="toggleTheme()" title="Farbschema umschalten">
     <span id="themeIcon">🌙</span>
@@ -460,7 +548,7 @@
     <div class="group">
       <label class="title">Eigener Prompt (optional)</label>
       <textarea id="customPrompt" rows="3" placeholder="Eigenen Prompt hier eingeben … überschreibt die Aufgaben-Auswahl oben und testet stattdessen genau diesen Text."
-        style="width:100%; background:var(--panel-2); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:14px; font-family:inherit; resize:vertical;"
+        style="width:100%; background:var(--panel-2); color:var(--text); border:1px solid var(--border); border-radius:3px; padding:10px 12px; font-size:14px; font-family:'Inter Tight',sans-serif; line-height:1.65; resize:vertical;"
         oninput="onCustomPromptInput()"></textarea>
       <label class="task-row" style="margin-top:8px; display:inline-flex;">
         <input type="checkbox" id="customUseTools">
@@ -562,8 +650,8 @@ let CONFIG = { models: [], tasks: [], pricing: null };
 
 // --- Init ------------------------------------------------------------------
 async function init() {
-  // Theme aus localStorage laden
-  const savedTheme = localStorage.getItem('theme') || 'dark';
+  // Theme aus localStorage laden (Standard: hell)
+  const savedTheme = localStorage.getItem('theme') || 'light';
   document.documentElement.setAttribute('data-theme', savedTheme);
   updateThemeIcon();
 
@@ -608,7 +696,7 @@ function toggleTheme() {
 }
 
 function updateThemeIcon() {
-  const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+  const theme = document.documentElement.getAttribute('data-theme') || 'light';
   document.getElementById('themeIcon').textContent = theme === 'dark' ? '🌙' : '☀️';
 }
 
@@ -1157,13 +1245,7 @@ function renderResults(suite) {
     </tbody>
   </table></div>
   
-  <!-- Drill-Down für Kernzahlen -->
-  <details style="margin-top:16px">
-    <summary style="font-size:13px;color:var(--accent);cursor:pointer;user-select:none">🔍 Wie wurden diese Zahlen erhoben?</summary>
-    <div class="drill-panel" style="margin-top:10px">
-      ${renderDrillDown(suite, W)}
-    </div>
-  </details>
+
   
   <div class="price-note">
     ⚠ <b>Token-Zähler sind roh und nicht kostengewichtet.</b> Verschiedene Token-Typen kosten unterschiedlich viel:
@@ -1292,139 +1374,6 @@ function renderResults(suite) {
   });
 
   document.getElementById('resultsCard').scrollIntoView({behavior:'smooth'});
-}
-
-function renderDrillDown(suite, W) {
-  if (!suite.aggregates || suite.aggregates.length === 0) {
-    return '<p style="color:var(--muted);font-size:12px">Keine aggregierten Daten verfügbar (alte Suite-Version).</p>';
-  }
-  
-  const baselineAggs = suite.aggregates.filter(a => a.task_complexity === 'baseline');
-  const aggs = baselineAggs.length > 0 ? baselineAggs : suite.aggregates;
-  const piAggs = aggs.filter(a => a.harness === 'pi');
-  const ccAggs = aggs.filter(a => a.harness === 'claude-code');
-  
-  if (!piAggs.length && !ccAggs.length) return '<p style="color:var(--muted);font-size:12px">Keine Daten.</p>';
-  
-  // Preise aus CONFIG.pricing oder Defaults
-  let inputPrice = 3.0, outputPrice = 15.0;  // USD per MTok (Haiku-Defaults)
-  const cacheReadMult = W.cacheRead;   // 0.1
-  const cacheWriteMult = W.cacheWrite; // 1.25
-  
-  // Versuche Preise aus Config zu holen (erstes Modell)
-  if (CONFIG.pricing && CONFIG.pricing.models) {
-    const firstModel = Object.keys(CONFIG.pricing.models)[0];
-    if (firstModel && CONFIG.pricing.models[firstModel]) {
-      inputPrice = CONFIG.pricing.models[firstModel].input;
-      outputPrice = CONFIG.pricing.models[firstModel].output;
-    }
-  }
-  
-  const renderHarness = (name, aggsArr) => {
-    if (!aggsArr.length) return '';
-    const a = aggsArr[0];  // Beispiel-Aggregat (alle haben gleiche Struktur)
-    const inp = a.metrics.input_tokens ? a.metrics.input_tokens.median : 0;
-    const cr = a.metrics.cache_read ? a.metrics.cache_read.median : 0;
-    const cw = a.metrics.cache_write ? a.metrics.cache_write.median : 0;
-    const out = a.metrics.output_tokens ? a.metrics.output_tokens.median : 0;
-    const overhead = a.metrics.overhead ? a.metrics.overhead.median : (inp + cr + cw);
-    const total = a.metrics.total_tokens ? a.metrics.total_tokens.median : (overhead + out);
-    const n = a.n || 1;
-    
-    // Min-Max-Ranges
-    const range = (metric) => {
-      if (!a.metrics[metric]) return '—';
-      const m = a.metrics[metric];
-      if (m.min === m.max) return '';
-      return ` (${fmtN(m.min)}–${fmtN(m.max)})`;
-    };
-    
-    // Kosten-Breakdown berechnen
-    const costInput = (inp / 1000000) * inputPrice;
-    const costCacheRead = (cr / 1000000) * inputPrice * cacheReadMult;
-    const costCacheWrite = (cw / 1000000) * inputPrice * cacheWriteMult;
-    const costOutput = (out / 1000000) * outputPrice;
-    const costTotal = costInput + costCacheRead + costCacheWrite + costOutput;
-    const costOverhead = costInput + costCacheRead + costCacheWrite;
-    
-    return `
-      <h5 style="color:${name==='Pi'?'var(--pi)':'var(--cc)'}">${name} — n=${n}</h5>
-      <div style="overflow-x:auto;margin-bottom:16px">
-        <table style="width:100%;font-size:12px;border-collapse:collapse">
-          <thead style="background:var(--panel);border-bottom:1px solid var(--border)">
-            <tr>
-              <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:11px">Feld</th>
-              <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px">Median</th>
-              <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px">min–max</th>
-              <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px">Kosten-Anteil</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-bottom:1px solid var(--border)">
-              <td style="padding:6px 8px">input</td>
-              <td style="padding:6px 8px;text-align:right;font-weight:600">${fmtN(inp)}</td>
-              <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:11px">${range('input_tokens')}</td>
-              <td style="padding:6px 8px;text-align:right;font-family:ui-monospace,monospace">${fmtCost(costInput)}</td>
-            </tr>
-            <tr style="border-bottom:1px solid var(--border)">
-              <td style="padding:6px 8px">cache↑ write</td>
-              <td style="padding:6px 8px;text-align:right;font-weight:600">${fmtN(cw)}</td>
-              <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:11px">${range('cache_write')}</td>
-              <td style="padding:6px 8px;text-align:right;font-family:ui-monospace,monospace">${fmtCost(costCacheWrite)}</td>
-            </tr>
-            <tr style="border-bottom:1px solid var(--border)">
-              <td style="padding:6px 8px">cache↓ read</td>
-              <td style="padding:6px 8px;text-align:right;font-weight:600">${fmtN(cr)}</td>
-              <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:11px">${range('cache_read')}</td>
-              <td style="padding:6px 8px;text-align:right;font-family:ui-monospace,monospace">${fmtCost(costCacheRead)}</td>
-            </tr>
-            <tr style="border-bottom:1px solid var(--border)">
-              <td style="padding:6px 8px">output</td>
-              <td style="padding:6px 8px;text-align:right;font-weight:600">${fmtN(out)}</td>
-              <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:11px">${range('output_tokens')}</td>
-              <td style="padding:6px 8px;text-align:right;font-family:ui-monospace,monospace">${fmtCost(costOutput)}</td>
-            </tr>
-            <tr style="border-top:2px solid var(--border);font-weight:600">
-              <td style="padding:6px 8px">Overhead</td>
-              <td style="padding:6px 8px;text-align:right">${fmtN(overhead)}</td>
-              <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:11px">${range('overhead')}</td>
-              <td style="padding:6px 8px;text-align:right;font-family:ui-monospace,monospace">${fmtCost(costOverhead)}</td>
-            </tr>
-            <tr style="border-bottom:1px solid var(--border);font-weight:600">
-              <td style="padding:6px 8px">Total</td>
-              <td style="padding:6px 8px;text-align:right">${fmtN(total)}</td>
-              <td style="padding:6px 8px;text-align:right;color:var(--muted);font-size:11px">${range('total_tokens')}</td>
-              <td style="padding:6px 8px;text-align:right;font-family:ui-monospace,monospace">${fmtCost(costTotal)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    `;
-  };
-  
-  let html = renderHarness('Pi', piAggs);
-  html += renderHarness('Claude Code', ccAggs);
-  
-  // 5-Minuten-Cache-Hinweis
-  html += '<div style="background:var(--panel-2);border:1px solid var(--border);border-left:3px solid var(--warn);border-radius:8px;padding:10px 12px;margin-top:14px;font-size:12px;line-height:1.6">';
-  html += '⏱ <b>5-Minuten-Cache:</b> Anthropic cached den System-Prompt für 5 Min. Nach einer längeren Pause → erneuter <code>cache_write</code> (teuer). Im Dauerbetrieb → meist <code>cache_read</code> (günstig). Claude Code hat im Kern ~21.500 Tokens die IMMER aus dem Cache gelesen werden (konstanter Overhead). Pi nutzt meist keinen Cache (Overhead = Input).';
-  html += '</div>';
-  
-  // Mini-Provenienz
-  if (suite.provenance) {
-    const p = suite.provenance;
-    html += '<hr style="margin:16px 0;border:none;border-top:1px solid var(--border)">';
-    html += '<h5>Provenienz (Auszug)</h5>';
-    html += '<div class="drill-row">';
-    if (p.tool_versions) {
-      html += `<div class="drill-item"><div class="drill-label">Pi-Version</div><div class="drill-value">${p.tool_versions.pi || '?'}</div></div>`;
-      html += `<div class="drill-item"><div class="drill-label">Claude Code-Version</div><div class="drill-value">${p.tool_versions.claude || '?'}</div></div>`;
-    }
-    if (p.repeat) html += `<div class="drill-item"><div class="drill-label">Wiederholungen</div><div class="drill-value">${p.repeat}</div></div>`;
-    html += '</div>';
-  }
-  
-  return html;
 }
 
 function renderProvenance(suite) {
