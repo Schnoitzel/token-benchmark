@@ -1,6 +1,6 @@
 # Präsentation (Summer Show) + Doku-Abgabe + Container-Distribution
 
-- **Status:** Planung — **nicht implementieren** bis (a) neue `medium-bash`-Daten vorliegen und (b) Nutzer ausdrücklich „Go" gibt.
+- **Status:** In Umsetzung — Go erteilt 2026-06-30. Container + faire `medium-bash`-Daten liegen vor (ADR-0004/0005); Präsentation gebaut, im visuellen Review. PDFs offen.
 - **Date:** 2026-06-30
 - **Branch/Worktree:** main (kleine, in sich geschlossene Schritte)
 
@@ -27,12 +27,22 @@ Aus dem POC drei Artefakte ableiten, klar getrennt:
 
 ## ⚠️ Blocker / offene Daten
 
-- **`medium-bash` läuft neu** (war unfair, ADR-0003 Environment-Asymmetrie). Der alte „31×"-Tool-Task-
-  Ausreißer (alte Folie 6) ist damit voraussichtlich hinfällig → erst mit neuen Daten final formulieren.
-- **Real-Task ehrlich kennzeichnen:** n=5, Einzelszenario. Regel für die Präsi:
-  - Decken sich die Real-Task-Ergebnisse mit den synthetischen → **nur kurz benennen** („auch ein
-    reales Szenario getestet, gleiches Bild").
-  - Weichen sie **stark** ab → **explizit als Abweichung erwähnen** (eigener Satz/Hinweis).
+- **Plattform-Asymmetrie entdeckt (ADR-0004, 2026-06-30):** `claude` ist in dieser Umgebung ein
+  **Windows-Binary** (`/mnt/c/.../npm/claude`), `pi` läuft **Linux/WSL**. Betrifft **alle Tool-/
+  Multi-Turn-Tasks** (Tokens, Turns, Laufzeit verfälscht), **nicht** die Overhead-Kernzahl (~8×,
+  beruht auf Single-Turn-Tasks `num_turns=1`).
+- ~~**`medium-bash`-Re-Run noch nicht zitierfähig (Plattform-Asymmetrie).**~~ ✅ **erledigt
+  (2026-06-30):** im Container fair neu gefahren (`benchmark-c066a92f.json`, n=10, 0 Fehler) →
+  konsistent **4,7–6,8×** (statt Windows-Artefakt 14–22×). Per Merge (ADR-0005) in die faire
+  Gesamtsuite `benchmark-9a72151a.json` eingearbeitet. Der „14–22×"-Ausreißer war ein Messartefakt.
+- **Real-Task ehrlich kennzeichnen:** n=5, Einzelszenario, **plattform-asymmetrisch** (Repo unter
+  `/mnt/c`, CC nativ Windows, Pi über langsame WSL-Brücke). Verifiziert: **Pi liegt NICHT
+  durchgängig vorne** — bei Haiku teurer *und* langsamer als CC, nur bei Opus klar vorne.
+  Regel für die Präsi:
+  - **Keine** „Pi gewinnt trotz Nachteil"-Aussage (Daten widerlegen das bei Haiku).
+  - Belastbare Botschaft: „Über eine ganze, mehrstufige Aufgabe hängt die Effizienz vom Modell
+    ab (mal Pi, mal CC vorne); der robuste Befund bleibt der **Overhead pro Anfrage ~8×**."
+  - Real-Task nicht neu fahren (zu teuer) — nur mit diesem Vorbehalt erwähnen.
 
 ## Inhalt: Präsentation (Ziel 7 Folien / ~10 min)
 
@@ -89,7 +99,11 @@ Auf Folie 2 (Unterschied der Harnesses) + Folie 4 (Annotation) erklären:
 - Was bewusst fehlt (Real-Task) und warum.
 - Nächste Schritte: Multi-Slides, mehr/billigere Modelle, Quellen-Phase F.
 
-## Inhalt: Container-Distribution
+## Inhalt: Container-Distribution (+ methodische Messumgebung)
+
+> **Doppelrolle (ab ADR-0004):** Der Container ist nicht nur Distributions-Mittel für Kollegen,
+> sondern die **faire Messumgebung** für Tool-Tasks — beide Harnesses laufen darin im **selben**
+> Linux-OS, was die Windows/Linux-Asymmetrie beseitigt. Der `medium-bash`-Neulauf passiert hier.
 
 Entscheidungen (mit Nutzer abgestimmt 2026-06-30):
 - **Login:** Jeder Kollege hat eigenen Zugang und loggt sich **im Container selbst** ein
@@ -103,16 +117,25 @@ Entscheidungen (mit Nutzer abgestimmt 2026-06-30):
 
 ## Schritte (erst nach Daten + Go abarbeiten)
 
-- [ ] **D0 — Daten:** neuen `medium-bash`-Lauf + Referenzlauf n=10 sichten; finale Zahlen festziehen.
-      Real-Task n=5 bestätigen. „mehr Turns/günstiger"-Aussage gegen Daten verifizieren.
-- [ ] **P1 — Präsi-Gerüst:** 7 Folien gemäß Tabelle, Versuchsaufbau-Folie (Kategorien + Verweis Doku).
-- [ ] **P2 — Ergebnis-Folie:** Doppel-Chart (Option 2) mit finalen Zahlen, Captions + Einheiten.
-- [ ] **P3 — Harness-Unterschied/Overhead-Quelle:** Folie 2 + Annotation Folie 4, Aussagen datengedeckt.
-- [ ] **P4 — Qualität/Real-Task:** Folie 5 (bedingte Real-Task-Erwähnung je nach Abweichung).
-- [ ] **P5 — Live-Demo-Folie + Fazit:** finalisieren; Live-Demo-Titel-Bug (alte Folie 10) vermeiden.
-- [ ] **DOC1 — PDF 1 (Methodik & Ergebnisse):** aus docs zusammenziehen, finale Tabellen.
+- [x] **D0 — Daten gesichtet (2026-06-30):** Referenzlauf `benchmark-d1b7ef63.json` (540 Runs, n=10)
+      geprüft — sauber, Sonnet-ID korrekt (`claude-sonnet-4-6`), nur 2 Pi-Timeouts. **Befund:**
+      Plattform-Asymmetrie (ADR-0004) → `medium-bash`-Re-Run noch nicht fair. „mehr Turns/günstiger"
+      gegen Daten geprüft: hält **nicht** (Real-Task Haiku → Pi teurer). Overhead ~8× bestätigt.
+- [x] **C1 — Container** (2026-06-30): `Dockerfile` (node:24-bookworm-slim, Python, `pi`+`claude`
+      beide nativ Linux), `docker/run.sh`, `docker/README.md`, `.dockerignore`. Credentials-Import
+      statt headless-OAuth (`import-creds`), läuft als non-root User `node`. Real-Task-Skip verifiziert.
+- [x] **D1 — `medium-bash` im Container neu gefahren** (2026-06-30): n=10, 60 Runs, 0 Fehler
+      → `benchmark-c066a92f.json`, Faktor 4,7–6,8×. CC-Turns 2–5 (statt 7–16).
+- [x] **D2 — Merge zur fairen Gesamtsuite** (2026-06-30, ADR-0005): `merge_suites.py` →
+      `benchmark-9a72151a.json` (540 Runs); `results/` aufgeräumt; gemischte Provenienz gekennzeichnet.
+- [x] **P1–P5 — Präsentation gebaut** (2026-06-30): `Token-Benchmark-SummerShow.pptx` (8 Folien,
+      SelectLine-PPT-Template via `python-pptx`, `build_presentation_v2.py`). Folie 4 = brand-konformes
+      Chart als gerendertes PNG (`folie4-chart.html` → Edge headless, Anthrazit-Staffelung, Datenlabels).
+      Folie 8 = „Noch Fragen?". **Status:** im visuellen Review (User prüft in PowerPoint).
+- [ ] **P6 — Review-Abschluss:** offene Detailfrage Folie 4 (Logo aufs Chart-PNG?); Live-Demo proben.
+- [ ] **DOC1 — PDF 1 (Methodik & Ergebnisse):** aus docs zusammenziehen, finale Tabellen (Quelle `9a72151a`).
 - [ ] **DOC2 — PDF 2 (Nutzung & Ausblick):** Anleitung + Container + Limits.
-- [ ] **C1 — Container:** Dockerfile + README; Real-Task-Skip verifizieren; CLIs headless testen.
+- [ ] **JUDGE (optional) — `judge.py`** für `9a72151a` (blinder Qualitätsbeleg, falls Zeit).
 
 ## Definition of Done
 

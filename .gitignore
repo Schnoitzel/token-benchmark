@@ -8,6 +8,11 @@ venv/
 # Benchmark-Ergebnisse (werden zur Laufzeit erzeugt; bewusst nicht versioniert)
 results/
 
+# Praesentations-Artefakte (lokal + auf Desktop; bewusst nicht versioniert)
+docs/praesentation/
+build_presentation_v2.py
+qa_presentation.py
+
 # Editor / OS
 .DS_Store
 .idea/

@@ -146,8 +146,12 @@ python3 report.py        # Bericht aus neuestem Lauf (inkl. Qualität, falls bew
 - ~~turn_end-Parser-Fix~~ ✅ erledigt (ADR-0002, 2026-06-25)
 - **Real-Task-Runs abschließen:** Pi Opus (Re-Run) + alle 3 CC-Modelle noch
   offen. Qualitätsdoku: `docs/quality-eval/2026-06-25-real-task-ergebnisse.md`.
-- **Phase E (Referenzlauf n=10):** alle Tasks, alle 3 Modelle, n=10 → `docs/evidence/`
-  (Plan: `docs/plans/2026-06-25-token-breakdown-n10.md`)
+- ~~Phase E (Referenzlauf n=10)~~ ✅ gefahren (540 Runs, `results/benchmark-d1b7ef63.json`,
+  2026-06-29); **aber** `medium-bash` war unfair → ersetzt (ADR-0003) und läuft neu.
+- **Präsentation + Doku + Container** (Summer Show): schlanke Präsi (≤10 min),
+  2 PDFs (Methodik/Ergebnisse + Nutzung/Ausblick), Container für Kollegen ohne
+  Real-Task. Plan: `docs/plans/2026-06-30-praesentation-und-doku.md`.
+  **Gated:** wartet auf neue `medium-bash`-Daten + User-Go.
 - **Phase F (Quellen):** Anthropic-Docs belegen (Cache-TTL für Claude-4 verifizieren),
   Inferenzen kennzeichnen (Plan Phase F, selber Plan)
 - Multi-Slides im Präsentationsmodus

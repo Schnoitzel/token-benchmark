@@ -136,6 +136,16 @@ Tokens zeigen den Umfang, Kosten den finanziellen Effekt.
   Lernprinzip: Tool-Tasks muessen auf environment-Symmetrie geprueft werden bevor
   Ergebnisse als Overhead-Vergleich gewertet werden.
 
+- **Plattform-Asymmetrie: CC laeuft als Windows-Prozess, Pi nativ in Linux/WSL.**
+  In der Messumgebung ist `claude` ein Windows-Binary (`/mnt/c/.../npm/claude`),
+  `pi` laeuft in WSL/Linux. Das betrifft **ausschliesslich Tool-/Multi-Turn-Tasks**
+  (Tokens, Turns, Laufzeit verfaelscht) — die **Overhead-Kernzahl ~8x bleibt gueltig**,
+  weil sie auf Single-Turn-Tasks (`num_turns=1`, keine Tool-Ausfuehrung) beruht.
+  Konkret betroffen: `medium-bash` (7–16 Turns) und leicht `simple-code` (2 Turns);
+  die Real-Tasks (Repo unter `/mnt/c`, 13–20 Turns) sind ebenfalls verfaelscht — dort
+  liegt Pi **nicht** durchgaengig vorne (bei Haiku teurer/langsamer als CC). Faire
+  Tool-Messung erfordert gleiches OS fuer beide → **Container** (ADR-0004, 2026-06-30).
+
 *Quellen-Vollbeleg (Phase F) steht aus. Alle Befunde bis dahin: Messdaten in*
 *`docs/evidence/`, Anthropic-Docs unter https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching*
 *und https://www.anthropic.com/pricing*
