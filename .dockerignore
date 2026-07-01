@@ -1,0 +1,23 @@
+# Grosse/irrelevante Dateien nicht ins Image kopieren
+.git/
+.github/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+results/
+docs/
+tests/
+*.md
+!README.md
+Dockerfile
+.dockerignore
+docker/
